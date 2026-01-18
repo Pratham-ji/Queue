@@ -62,6 +62,10 @@ export default function LoginScreen() {
       alert("Please enter a valid phone number");
       return;
     }
+    else if (phoneNumber.length > 10) {
+      alert("Please enter a valid phone number");
+      return;
+    }
     navigation.replace("Main");
   };
 

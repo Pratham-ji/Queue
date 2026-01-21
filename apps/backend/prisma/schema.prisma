@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. THE DOCTOR / PROVIDER
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // Hashed
+  name      String
+  phone     String?
+  role      Role     @default(PROVIDER)
+  createdAt DateTime @default(now())
+
+  // Relations
+  clinic    Clinic?
+}
+
+// 2. THE CLINIC (A doctor belongs to a clinic)
+model Clinic {
+  id        String   @id @default(uuid())
+  name      String
+  address   String?
+  ownerId   String   @unique
+  owner     User     @relation(fields: [ownerId], references: [id])
+
+  // The Queue
+  queue     Patient[]
+}
+
+// 3. THE PATIENT (The Queue Items)
+model Patient {
+  id          String      @id @default(uuid())
+  token       Int         // The "42" number
+  name        String
+  phone       String?
+  type        VisitType   @default(CHECKUP)
+  status      QueueStatus @default(WAITING)
+
+  arrivalTime DateTime    @default(now())
+  servedTime  DateTime?   // When did the doctor press "Call Next"?
+  completedTime DateTime? // When did the session end?
+
+  clinicId    String
+  clinic      Clinic      @relation(fields: [clinicId], references: [id])
+}
+
+// --- ENUMS (Strict Typing) ---
+enum Role {
+  PROVIDER
+  ADMIN
+  STAFF
+}
+
+enum VisitType {
+  CHECKUP
+  EMERGENCY
+  REPORT
+  FOLLOWUP
+}
+
+enum QueueStatus {
+  WAITING
+  SERVING
+  COMPLETED
+  MISSED
+}

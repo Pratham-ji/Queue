@@ -21,7 +21,7 @@ export default function PatientListScreen({ navigation }: any) {
   const [newPatientName, setNewPatientName] = useState("");
 
   // CONNECT TO STORE
-  const { queue, stats } = useQueueStore(); // You might need to add an 'addPatient' action to your store later
+  const { queue } = useQueueStore(); // You might need to add an 'addPatient' action to your store later
 
   const filteredQueue = queue.filter(
     (p) =>

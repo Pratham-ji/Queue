@@ -11,7 +11,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SHADOWS } from "../../theme";
 
-// Reusable Stat Component
 const ProfileStat = ({ value, label }: any) => (
   <View style={styles.statItem}>
     <Text style={styles.statVal}>{value}</Text>
@@ -19,7 +18,6 @@ const ProfileStat = ({ value, label }: any) => (
   </View>
 );
 
-// Reusable Menu Row Component
 const MenuRow = ({ icon, label, onPress, showChevron = true }: any) => (
   <TouchableOpacity
     style={styles.menuRow}
@@ -50,10 +48,7 @@ export default function SettingsScreen({ navigation }: any) {
           <Ionicons name="arrow-back" size={24} color="#0F172A" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Profile</Text>
-        <TouchableOpacity
-          style={styles.notifBtn}
-          onPress={() => navigation.navigate("Notification")}
-        >
+        <TouchableOpacity style={styles.notifBtn}>
           <Ionicons name="notifications-outline" size={24} color="#0F172A" />
           <View style={styles.redDot} />
         </TouchableOpacity>
@@ -90,19 +85,13 @@ export default function SettingsScreen({ navigation }: any) {
 
           <View style={styles.divider} />
 
-          {/* CLICKABLE STATS -> GOES TO ANALYTICS */}
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => navigation.navigate("Analytics")}
-          >
-            <View style={styles.statsRow}>
-              <ProfileStat value="18" label="Served" />
-              <View style={styles.vDiv} />
-              <ProfileStat value="12" label="Waiting" />
-              <View style={styles.vDiv} />
-              <ProfileStat value="4.9" label="Rating" />
-            </View>
-          </TouchableOpacity>
+          <View style={styles.statsRow}>
+            <ProfileStat value="18" label="Served" />
+            <View style={styles.vDiv} />
+            <ProfileStat value="12" label="Waiting" />
+            <View style={styles.vDiv} />
+            <ProfileStat value="4.9" label="Rating" />
+          </View>
         </View>
 
         {/* 2. RECENT HISTORY */}
@@ -121,20 +110,13 @@ export default function SettingsScreen({ navigation }: any) {
             <Text style={styles.historyName}>Alice M.</Text>
             <Text style={styles.historyDetail}>General Check-up • Today</Text>
           </View>
-          <TouchableOpacity
-            style={styles.detailsBtn}
-            onPress={() => navigation.navigate("History")}
-          >
+          <TouchableOpacity style={styles.detailsBtn}>
             <Text style={styles.detailsText}>Details</Text>
           </TouchableOpacity>
         </View>
 
         {/* 3. CLINIC STATUS (Dark Blue Banner) */}
-        <TouchableOpacity
-          style={styles.clinicBanner}
-          activeOpacity={0.9}
-          onPress={() => navigation.navigate("ClinicProfile")}
-        >
+        <View style={styles.clinicBanner}>
           <View style={{ flex: 1 }}>
             <Text style={styles.bannerTitle}>Clinic Status</Text>
             <Text style={styles.bannerSub}>
@@ -144,7 +126,7 @@ export default function SettingsScreen({ navigation }: any) {
           <View style={styles.bannerIcon}>
             <Ionicons name="business" size={20} color="#FFF" />
           </View>
-        </TouchableOpacity>
+        </View>
 
         {/* 4. SETTINGS MENU */}
         <Text style={styles.sectionTitle}>ACCOUNT & SECURITY</Text>
@@ -172,7 +154,6 @@ export default function SettingsScreen({ navigation }: any) {
         <TouchableOpacity
           style={styles.logoutBtn}
           onPress={() => navigation.replace("Login")}
-          activeOpacity={0.8}
         >
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
@@ -352,19 +333,12 @@ const styles = StyleSheet.create({
   menuLabel: { fontSize: 15, fontWeight: "500", color: "#1E293B" },
   menuDiv: { height: 1, backgroundColor: "#F8FAFC", marginLeft: 48 },
 
-  logoutBtn: {
-    alignItems: "center",
-    padding: 16,
-    backgroundColor: "#FEF2F2",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#FEE2E2",
-  },
+  logoutBtn: { alignItems: "center", padding: 16 },
   logoutText: { color: "#EF4444", fontWeight: "700", fontSize: 15 },
   version: {
     textAlign: "center",
     fontSize: 12,
     color: "#CBD5E1",
-    marginTop: 16,
+    marginTop: 8,
   },
 });

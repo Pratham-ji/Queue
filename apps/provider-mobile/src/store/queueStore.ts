@@ -1,42 +1,86 @@
 import { create } from "zustand";
-import { MOCK_QUEUE } from "../services/mockData";
-import { Patient } from "../types";
+import { api, socket } from "../services/api";
+
+// Types
+export interface Patient {
+  id: string;
+  name: string;
+  token: number;
+  type: string;
+  status: "WAITING" | "SERVED" | "MISSED";
+  arrivalTime: string;
+}
 
 interface QueueState {
   currentPatient: Patient | null;
   queue: Patient[];
-  stats: { waiting: number; completed: number; avgTime: string };
   isOnline: boolean;
 
   // Actions
+  fetchQueue: () => Promise<void>;
   toggleOnline: () => void;
-  callNextPatient: () => void;
+  callNextPatient: () => Promise<void>;
+  initializeSocket: () => void;
 }
 
-export const useQueueStore = create<QueueState>((set) => ({
-  // Initialize with Mock Data
-  currentPatient: MOCK_QUEUE[0],
-  queue: MOCK_QUEUE.slice(1), // Everyone else is waiting
-  stats: { waiting: MOCK_QUEUE.length - 1, completed: 14, avgTime: "12m" },
-  isOnline: true,
+export const useQueueStore = create<QueueState>((set, get) => ({
+  currentPatient: null,
+  queue: [],
+  isOnline: false,
 
-  toggleOnline: () => set((state) => ({ isOnline: !state.isOnline })),
+  // 1. FETCH FROM BACKEND
+  fetchQueue: async () => {
+    try {
+      const res = await api.get("/queue/clinic_1"); // 'clinic_1' is a placeholder ID
+      if (res.data.success) {
+        set({ queue: res.data.data });
+      }
+    } catch (error) {
+      console.error("Failed to fetch queue:", error);
+    }
+  },
 
-  callNextPatient: () =>
-    set((state) => {
-      if (state.queue.length === 0) return state; // Edge Case: Queue Empty
+  // 2. GO ONLINE & CONNECT SOCKET
+  toggleOnline: () => {
+    const { isOnline } = get();
+    const newState = !isOnline;
 
-      const next = state.queue[0];
-      const remaining = state.queue.slice(1);
+    set({ isOnline: newState });
 
-      return {
-        currentPatient: { ...next, status: "In Progress" },
-        queue: remaining,
-        stats: {
-          ...state.stats,
-          waiting: remaining.length,
-          completed: state.stats.completed + 1,
-        },
-      };
-    }),
+    if (newState) {
+      socket.connect();
+      socket.emit("join_clinic", "clinic_1");
+      console.log("🟢 Socket Connected");
+    } else {
+      socket.disconnect();
+      console.log("🔴 Socket Disconnected");
+    }
+  },
+
+  // 3. REAL API CALL
+  callNextPatient: async () => {
+    try {
+      const { queue } = get();
+      if (queue.length === 0) return;
+
+      // Optimistic Update (Update UI instantly)
+      const next = queue[0];
+      const remaining = queue.slice(1);
+      set({ currentPatient: next, queue: remaining });
+
+      // Send to Backend
+      await api.post("/queue/clinic_1/next");
+    } catch (error) {
+      console.error("Call Next Failed:", error);
+      // Revert if failed (Optional logic here)
+    }
+  },
+
+  // 4. LISTEN FOR LIVE UPDATES
+  initializeSocket: () => {
+    socket.on("queue_update", (updatedQueue: Patient[]) => {
+      console.log("⚡ Live Update Received");
+      set({ queue: updatedQueue });
+    });
+  },
 }));

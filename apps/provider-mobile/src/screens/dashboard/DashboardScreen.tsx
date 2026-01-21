@@ -15,11 +15,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Animatable from "react-native-animatable";
 import { useQueueStore } from "../../store/queueStore";
-import { COLORS, SHADOWS } from "../../theme";
+import { COLORS } from "../../theme";
 
-const { width } = Dimensions.get("window");
-
-// --- MINIMAL HEADER (With Integrated Status) ---
+// --- MINIMAL HEADER ---
 const DashboardHeader = ({ navigation, isOnline, toggleOnline }: any) => (
   <View style={styles.header}>
     <View>
@@ -28,7 +26,6 @@ const DashboardHeader = ({ navigation, isOnline, toggleOnline }: any) => (
     </View>
 
     <View style={styles.headerRight}>
-      {/* Status Pill - Integrated here to save space */}
       <View
         style={[
           styles.statusPill,
@@ -104,7 +101,7 @@ export default function DashboardScreen({ navigation }: any) {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* HERO CARD - CLICKABLE */}
+        {/* HERO CARD */}
         <TouchableOpacity
           activeOpacity={0.95}
           onPress={() => {
@@ -150,13 +147,13 @@ export default function DashboardScreen({ navigation }: any) {
                 </Text>
                 <Text style={styles.pDetail}>
                   {currentPatient
-                    ? `${currentPatient.type} • ${currentPatient.arrivalTime}`
+                    ? `${currentPatient.type || "General Visit"} • ${currentPatient.arrivalTime || "Checked In"}`
                     : "Waiting for next patient..."}
                 </Text>
               </View>
             </LinearGradient>
 
-            {/* QUICK ACTIONS - Integrated elegantly */}
+            {/* QUICK ACTIONS */}
             <View style={styles.actionRow}>
               <TouchableOpacity
                 style={styles.actionBtn}
@@ -220,7 +217,7 @@ export default function DashboardScreen({ navigation }: any) {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.listName}>{p.name}</Text>
-                  <Text style={styles.listType}>{p.type}</Text>
+                  <Text style={styles.listType}>{p.type || "General"}</Text>
                 </View>
                 <View style={styles.waitBadge}>
                   <Text style={styles.waitText}>WAITING</Text>
@@ -237,13 +234,14 @@ export default function DashboardScreen({ navigation }: any) {
           </View>
         ) : (
           <View style={styles.emptyState}>
-            <Ionicons name="cafe-outline" size={32} color="#94A3B8" />
+            <Ionicons name="cafe-outline" size={32} color="#CBD5E1" />
             <Text style={styles.emptyText}>Queue is clear.</Text>
+            <Text style={styles.emptySub}>Enjoy your break, Doctor.</Text>
           </View>
         )}
       </ScrollView>
 
-      {/* FLOATING ACTION BUTTON (Fixed Overlap) */}
+      {/* FLOATING ACTION BUTTON */}
       <Animatable.View
         animation="slideInUp"
         duration={500}
@@ -258,7 +256,7 @@ export default function DashboardScreen({ navigation }: any) {
           activeOpacity={0.9}
         >
           <Text style={styles.primaryBtnText}>
-            {queue.length === 0 ? "NO PATIENTS" : "CALL NEXT PATIENT"}
+            {queue.length === 0 ? "NO PATIENTS WAITING" : "CALL NEXT PATIENT"}
           </Text>
           {queue.length > 0 && (
             <Ionicons name="arrow-forward" size={20} color="#FFF" />
@@ -319,16 +317,16 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  // Scroll Content - BIG PADDING AT BOTTOM
-  scroll: { paddingHorizontal: 24, paddingBottom: 120, paddingTop: 10 },
+  // Scroll Content
+  scroll: { paddingHorizontal: 24, paddingBottom: 140, paddingTop: 10 },
 
   // Hero Card
   heroCardShadow: {
     shadowColor: COLORS.primary,
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
     borderRadius: 24,
     marginBottom: 32,
     backgroundColor: "#FFF",
@@ -470,7 +468,7 @@ const styles = StyleSheet.create({
   viewAllText: { fontSize: 13, fontWeight: "700", color: COLORS.primary },
 
   emptyState: {
-    padding: 32,
+    padding: 40,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#FFF",
@@ -479,7 +477,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-  emptyText: { color: "#94A3B8", fontSize: 14, marginTop: 8 },
+  emptyText: {
+    color: "#64748B",
+    fontSize: 15,
+    fontWeight: "600",
+    marginTop: 12,
+  },
+  emptySub: { color: "#94A3B8", fontSize: 13, marginTop: 4 },
 
   // Floating Button
   fabContainer: { position: "absolute", bottom: 32, left: 24, right: 24 },

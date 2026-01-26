@@ -62,7 +62,7 @@ export default function LoginScreen() {
       alert("Please enter a valid phone number");
       return;
     }
-    else if (phoneNumber.length > 10) {
+    else if (phoneNumber.length >  10) {
       alert("Please enter a valid phone number");
       return;
     }
@@ -105,26 +105,36 @@ export default function LoginScreen() {
             <Text style={styles.welcomeText}>Welcome to Queue</Text>
 
             {/* INPUT SECTION */}
-            <View style={styles.inputContainer}>
-              <View style={styles.inputTop}>
-                <Text style={styles.inputLabel}>Country/Region</Text>
-                <View style={styles.countryRow}>
-                  <Text style={styles.countryText}>India (+91)</Text>
-                  <Ionicons name="chevron-down" size={16} color={COLORS.text} />
+            <View style={styles.inputLabel}>
+              <Text style={styles.inputLabelText}>Phone number</Text>
+            </View>
+            <View style={styles.phoneInputContainer}>
+              <View style={styles.countryCodeContainer}>
+                <View style={styles.countryCodeTop}>
+                  <Text style={styles.countryCodeLabel}>Code</Text>
+                </View>
+                <View style={styles.countryCodeDivider} />
+                <View style={styles.countryCodeBottom}>
+                  <Text style={styles.countryCodeText}>+91</Text>
                 </View>
               </View>
-              <View style={styles.inputDivider} />
-              <View style={styles.inputBottom}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Phone number"
-                  placeholderTextColor={COLORS.subText}
-                  keyboardType="phone-pad"
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  // autoFocus can cause jitter on load in Android, set false
-                  autoFocus={false}
-                />
+              <View style={styles.phoneNumberContainer}>
+                <View style={styles.phoneNumberTop}>
+                  <Text style={styles.phoneNumberLabel}>Mobile</Text>
+                </View>
+                <View style={styles.phoneNumberDivider} />
+                <View style={styles.phoneNumberBottom}>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="Your number"
+                    placeholderTextColor={COLORS.subText}
+                    keyboardType="phone-pad"
+                    value={phoneNumber}
+                    onChangeText={setPhoneNumber}
+                    // autoFocus can cause jitter on load in Android, set false
+                    autoFocus={false}
+                  />
+                </View>
               </View>
             </View>
 
@@ -226,6 +236,77 @@ const styles = StyleSheet.create({
   },
 
   // Input
+  inputLabel: {
+    marginBottom: 8,
+  },
+  inputLabelText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  phoneInputContainer: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 8,
+  },
+  countryCodeContainer: {
+    width: "22%",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  countryCodeTop: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#FFF",
+  },
+  countryCodeLabel: {
+    fontSize: 11,
+    color: COLORS.subText,
+    fontWeight: "500",
+  },
+  countryCodeDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  countryCodeBottom: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: "#FFF",
+    alignItems: "center",
+  },
+  countryCodeText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  phoneNumberContainer: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  phoneNumberTop: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: "#FFF",
+  },
+  phoneNumberLabel: {
+    fontSize: 11,
+    color: COLORS.subText,
+    fontWeight: "500",
+  },
+  phoneNumberDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  phoneNumberBottom: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#FFF",
+  },
   inputContainer: {
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -238,7 +319,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: "#FFF",
   },
-  inputLabel: {
+  inputLabelOld: {
     fontSize: 12,
     color: COLORS.subText,
     marginBottom: 4,

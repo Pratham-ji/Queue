@@ -15,8 +15,24 @@ import ConsultationScreen from "../screens/dashboard/ConsultationScreen";
 import NotificationScreen from "../screens/dashboard/NotificationScreen";
 import EditProfileScreen from "../screens/profile/EditProfileScreen";
 import AnalyticsScreen from "../screens/profile/AnalyticsScreen";
+import ContentScreen from "../screens/content/ContentScreen";
 
-const Stack = createNativeStackNavigator();
+export type ProviderRootStackParamList = {
+  Login: undefined;
+  Dashboard: undefined;
+  PatientList: undefined;
+  Settings: undefined;
+  ClinicProfile: undefined;
+  History: undefined;
+  Scan: undefined;
+  Analytics: undefined;
+  Consultation: undefined;
+  EditProfile: undefined;
+  Notification: undefined;
+  ContentPage: { slug: string; title?: string; role?: "PROVIDER" | "ADMIN" };
+};
+
+const Stack = createNativeStackNavigator<ProviderRootStackParamList>();
 
 export default function RootNavigator() {
   return (
@@ -37,6 +53,17 @@ export default function RootNavigator() {
       <Stack.Screen name="Consultation" component={ConsultationScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="Notification" component={NotificationScreen} />
+
+      {/* Dynamic Content Pages (Help, Terms, FAQ, etc.) */}
+      <Stack.Screen
+        name="ContentPage"
+        component={ContentScreen}
+        options={{
+          animation: "slide_from_right",
+          headerShown: true,
+          title: "Information",
+        }}
+      />
     </Stack.Navigator>
   );
 }

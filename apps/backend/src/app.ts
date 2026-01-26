@@ -6,6 +6,7 @@ import morgan from "morgan";
 import helmet from "helmet";
 import dotenv from "dotenv";
 import queueRoutes from "./routes/queue.routes";
+import pageRoutes from "./routes/page.routes";
 
 // Load Config
 dotenv.config();
@@ -27,6 +28,7 @@ app.use(cors());
 app.use(helmet()); // Security headers
 app.use(morgan("dev")); // Logger
 app.use("/api/queue", queueRoutes);
+app.use("/api/pages", pageRoutes);
 
 // Health Check
 app.get("/", (req, res) => {

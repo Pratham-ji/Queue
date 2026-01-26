@@ -50,11 +50,24 @@ model Patient {
   clinic      Clinic      @relation(fields: [clinicId], references: [id])
 }
 
+// 4. PAGES & CONTENT (For delivering static pages to mobile apps)
+model Page {
+  id        String   @id @default(uuid())
+  slug      String   @unique  // e.g., "help", "about", "terms"
+  title     String
+  content   String   // HTML or JSON
+  type      PageType @default(INFO)  // Type of page
+  userRole  Role[]   @default([PROVIDER])  // Which roles can access: [PROVIDER, ADMIN]
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
 // --- ENUMS (Strict Typing) ---
 enum Role {
   PROVIDER
   ADMIN
   STAFF
+  USER  // For user-mobile app
 }
 
 enum VisitType {
@@ -69,4 +82,12 @@ enum QueueStatus {
   SERVING
   COMPLETED
   MISSED
+}
+
+enum PageType {
+  INFO         // Information pages (How it works, FAQ, etc.)
+  TERMS        // Terms & Conditions
+  PRIVACY      // Privacy Policy
+  GUIDE        // User guides
+  HELP         // Help & Support
 }

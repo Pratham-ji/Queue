@@ -6,12 +6,14 @@ import BottomTabs from "./BottomTabs";
 import LoginScreen from "../screens/auth/LoginScreen";
 import HospitalDetailsScreen from "../screens/hospital/HospitalDetailsScreen";
 import BookingScreen from "../screens/booking/BookingScreen";
+import ContentScreen from "../screens/content/ContentScreen";
 
 export type RootStackParamList = {
   Login: undefined;
   Main: undefined;
   HospitalDetails: { id: string };
   Booking: { doctorId: string };
+  ContentPage: { slug: string; title?: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -43,6 +45,17 @@ export default function RootNavigator() {
         options={{
           animation: "slide_from_bottom",
           presentation: "modal",
+        }}
+      />
+
+      {/* 4. Dynamic Content Pages (Help, Terms, FAQ, etc.) */}
+      <Stack.Screen
+        name="ContentPage"
+        component={ContentScreen}
+        options={{
+          animation: "slide_from_right",
+          headerShown: true,
+          title: "Information",
         }}
       />
     </Stack.Navigator>

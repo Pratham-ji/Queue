@@ -5,6 +5,11 @@ import cors from "cors";
 import morgan from "morgan";
 import helmet from "helmet";
 import dotenv from "dotenv";
+
+// ✅ IMPORT OTP ROUTES (IMPORTANT)
+import otpRoutes from "./auth/otp.routes";
+
+// Existing Queue routes
 import queueRoutes from "./routes/queue.routes";
 
 // Load Config
@@ -16,7 +21,7 @@ const server = http.createServer(app);
 // Initialize Socket.io (The "Pulse" of Queue Pro)
 const io = new Server(server, {
   cors: {
-    origin: "*", // Allow your mobile app to connect
+    origin: "*",
     methods: ["GET", "POST"],
   },
 });
@@ -24,26 +29,32 @@ const io = new Server(server, {
 // Middleware
 app.use(express.json());
 app.use(cors());
-app.use(helmet()); // Security headers
-app.use(morgan("dev")); // Logger
+app.use(helmet());
+app.use(morgan("dev"));
+
+// ✅ ROUTES
 app.use("/api/queue", queueRoutes);
+
+// 🔥 OTP AUTH ROUTES (THIS WAS MISSING)
+app.use("/api/auth", otpRoutes);
 
 // Health Check
 app.get("/", (req, res) => {
-  res.status(200).json({ status: "active", service: "Queue Pro API" });
+  res.status(200).json({
+    status: "active",
+    service: "Queue Pro API",
+  });
 });
 
 // --- SOCKET LOGIC ---
 io.on("connection", (socket) => {
   console.log(`⚡ Client connected: ${socket.id}`);
 
-  // Join a specific clinic room
   socket.on("join_clinic", (clinicId) => {
     socket.join(clinicId);
     console.log(`Socket ${socket.id} joined clinic ${clinicId}`);
   });
 
-  // Handle Disconnect
   socket.on("disconnect", () => {
     console.log(`Client disconnected: ${socket.id}`);
   });

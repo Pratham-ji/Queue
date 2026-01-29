@@ -58,7 +58,7 @@ export default function SearchInput({
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         returnKeyType="search"
-        {...props}
+        {...props}  
       />
 
       {value.length > 0 && onClear ? (

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -9,9 +9,17 @@ import {
   StatusBar,
   Alert,
   Platform,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+
+/* ===== IMPORT COMPONENTS ===== */
+import PersonalInformation from "../../components/PersonalInformation";
+import LoginSecurity from "../../components/LoginSecurity";
+import HelpCenter from "../../components/HelpCenter";
+import PrivacyTerms from "../../components/PrivacyTerms";
+import MedicalRecords from "../../components/MedicalRecords";
 
 // --- THEME ---
 const COLORS = {
@@ -57,6 +65,8 @@ const SectionHeader = ({ title }: { title: string }) => (
 );
 
 export default function ProfileScreen() {
+  const [activeComponent, setActiveComponent] = useState<string | null>(null);
+
   const handleLogout = () => {
     Alert.alert("Log Out", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
@@ -64,9 +74,30 @@ export default function ProfileScreen() {
     ]);
   };
 
+  // Helper to render the active component inside a Modal
+  const renderComponent = () => {
+    switch (activeComponent) {
+      case "Personal": return <PersonalInformation onClose={() => setActiveComponent(null)} />;
+      case "Security": return <LoginSecurity onClose={() => setActiveComponent(null)} />;
+      case "Help": return <HelpCenter onClose={() => setActiveComponent(null)} />;
+      case "Privacy": return <PrivacyTerms onClose={() => setActiveComponent(null)} />;
+      case "Medical": return <MedicalRecords onClose={() => setActiveComponent(null)} />;
+      default: return null;
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
+
+      {/* COMPONENT MODAL */}
+      <Modal
+        visible={activeComponent !== null}
+        animationType="slide"
+        onRequestClose={() => setActiveComponent(null)}
+      >
+        {renderComponent()}
+      </Modal>
 
       {/* HEADER */}
       <View style={styles.header}>
@@ -100,7 +131,10 @@ export default function ProfileScreen() {
                 <Text style={styles.memberText}>Basic Member</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.editIconBtn}>
+            <TouchableOpacity 
+              style={styles.editIconBtn}
+              onPress={() => setActiveComponent("Personal")}
+            >
               <Ionicons
                 name="create-outline"
                 size={20}
@@ -177,7 +211,7 @@ export default function ProfileScreen() {
           <SettingItem
             icon="person-outline"
             label="Personal Information"
-            onPress={() => {}}
+            onPress={() => setActiveComponent("Personal")}
           />
           <View style={styles.settingDivider} />
           <SettingItem
@@ -189,13 +223,13 @@ export default function ProfileScreen() {
           <SettingItem
             icon="lock-closed-outline"
             label="Login & Security"
-            onPress={() => {}}
+            onPress={() => setActiveComponent("Security")}
           />
           <View style={styles.settingDivider} />
           <SettingItem
             icon="document-text-outline"
             label="Medical Records"
-            onPress={() => {}}
+            onPress={() => setActiveComponent("Medical")}
           />
         </View>
 
@@ -204,7 +238,7 @@ export default function ProfileScreen() {
           <SettingItem
             icon="help-circle-outline"
             label="Help Center"
-            onPress={() => {}}
+            onPress={() => setActiveComponent("Help")}
           />
           <View style={styles.settingDivider} />
           <SettingItem
@@ -216,7 +250,7 @@ export default function ProfileScreen() {
           <SettingItem
             icon="shield-checkmark-outline"
             label="Privacy & Terms"
-            onPress={() => {}}
+            onPress={() => setActiveComponent("Privacy")}
           />
         </View>
 

@@ -31,6 +31,9 @@ model Clinic {
 
   // The Queue
   queue     Patient[]
+
+  // The Appointment
+  appointments Appointment[]
 }
 
 // 3. THE PATIENT (The Queue Items)
@@ -48,6 +51,44 @@ model Patient {
 
   clinicId    String
   clinic      Clinic      @relation(fields: [clinicId], references: [id])
+}
+
+// 4. The Appointment
+model Appointment {
+  id        String   @id @default(uuid())
+  clinicId  String
+  clinic    Clinic   @relation(fields: [clinicId], references: [id])
+
+  patientName  String
+  date         String   // Format: "2023-10-12"
+  time         String   // Format: "10:30 AM"
+  status       String   @default("CONFIRMED") // CONFIRMED, CANCELLED, COMPLETED
+
+  createdAt DateTime @default(now())
+}
+
+// 5. INSTANT QUEUE (The USP Feature)
+// Used for Salons, Banks, PBL, Events - anything needing a quick queue.
+model CustomSession {
+  id          String   @id @default(uuid())
+  hostName    String   // The person running the queue
+  title       String   // "PBL Review", "City Salon", "Table 5"
+  joinCode    String   @unique // Simple 6-digit code
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  participants SessionParticipant[]
+}
+
+model SessionParticipant {
+  id        String   @id @default(uuid())
+  name      String
+  token     Int      // 1, 2, 3...
+  status    String   @default("WAITING") // WAITING, SERVING, COMPLETED
+  joinedAt  DateTime @default(now())
+
+  sessionId String
+  session   CustomSession @relation(fields: [sessionId], references: [id])
 }
 
 // --- ENUMS (Strict Typing) ---

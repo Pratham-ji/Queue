@@ -6,6 +6,18 @@ import morgan from "morgan";
 import helmet from "helmet";
 import dotenv from "dotenv";
 import queueRoutes from "./routes/queue.routes";
+import {
+  createSession,
+  joinSession,
+  getSessionDetails,
+  callNext,
+} from "./controllers/custom.controller";
+
+// ✅ FIX: Import BOTH functions here
+import {
+  createAppointment,
+  getMyAppointments,
+} from "./controllers/booking.controller";
 
 // Load Config
 dotenv.config();
@@ -13,10 +25,10 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
-// Initialize Socket.io (The "Pulse" of Queue Pro)
+// Initialize Socket.io
 const io = new Server(server, {
   cors: {
-    origin: "*", // Allow your mobile app to connect
+    origin: "*",
     methods: ["GET", "POST"],
   },
 });
@@ -24,9 +36,19 @@ const io = new Server(server, {
 // Middleware
 app.use(express.json());
 app.use(cors());
-app.use(helmet()); // Security headers
-app.use(morgan("dev")); // Logger
+app.use(helmet());
+app.use(morgan("dev"));
+
+// --- 🚦 ROUTES ---
 app.use("/api/queue", queueRoutes);
+
+app.post("/api/booking/create", createAppointment);
+app.get("/api/booking/my-appointments", getMyAppointments); // This will work now
+
+app.post("/api/custom/create", createSession);
+app.post("/api/custom/join", joinSession);
+app.get("/api/custom/:sessionId", getSessionDetails);
+app.post("/api/custom/next", callNext);
 
 // Health Check
 app.get("/", (req, res) => {
@@ -37,23 +59,25 @@ app.get("/", (req, res) => {
 io.on("connection", (socket) => {
   console.log(`⚡ Client connected: ${socket.id}`);
 
-  // Join a specific clinic room
   socket.on("join_clinic", (clinicId) => {
     socket.join(clinicId);
     console.log(`Socket ${socket.id} joined clinic ${clinicId}`);
   });
 
-  // Handle Disconnect
+  socket.on("join_session_room", (sessionId) => {
+    socket.join(`session_${sessionId}`);
+    console.log(`Socket joined session room: ${sessionId}`);
+  });
+
   socket.on("disconnect", () => {
     console.log(`Client disconnected: ${socket.id}`);
   });
 });
 
-// Make IO accessible globally
 app.set("io", io);
 
 // Start Server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => {
   console.log(`
   🚀 SERVER RUNNING

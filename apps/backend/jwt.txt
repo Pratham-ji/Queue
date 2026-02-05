@@ -1,0 +1,11 @@
+JWT Flow in YOUR Project (Queue App)
+OTP Verified
+   ↓
+Generate Access Token
+Generate Refresh Token
+   ↓
+Send to Client
+   ↓
+Client calls APIs with Access Token
+   ↓
+If expired → Refresh Token used

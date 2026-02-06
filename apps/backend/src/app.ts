@@ -6,6 +6,7 @@ import morgan from "morgan";
 import helmet from "helmet";
 import dotenv from "dotenv";
 import queueRoutes from "./routes/queue.routes";
+import authRoutes from "./routes/auth.routes";
 import {
   createSession,
   joinSession,
@@ -38,6 +39,7 @@ app.use(express.json());
 app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
+app.use("/api/auth", authRoutes); // This enables /api/auth/login
 
 // --- 🚦 ROUTES ---
 app.use("/api/queue", queueRoutes);

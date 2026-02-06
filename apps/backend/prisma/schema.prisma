@@ -93,6 +93,7 @@ model SessionParticipant {
 
 // --- ENUMS (Strict Typing) ---
 enum Role {
+  PATIENT
   PROVIDER
   ADMIN
   STAFF

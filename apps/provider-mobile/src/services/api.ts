@@ -2,9 +2,10 @@ import axios from "axios";
 import { io } from "socket.io-client";
 import { Platform } from "react-native";
 
-// ANDROID EMULATOR uses 10.0.2.2, iOS uses localhost
-const BASE_URL =
-  Platform.OS === "android" ? "http://172.20.10.2:5001" : "http://localhost:5001";
+// 🔧 CONFIG: Use your real IP for BOTH Android and iOS
+// (Since you are on a Hotspot, localhost won't work on a physical iPhone)
+const BASE_URL = "http://172.20.10.2:5001";
+//const BASE_URL = "http://192.168.31.69:5001";
 
 // 1. HTTP CLIENT
 export const api = axios.create({
@@ -13,13 +14,12 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// 2. SOCKET CONNECTION (The "Pulse")
+// 2. SOCKET CONNECTION
 export const socket = io(BASE_URL, {
   autoConnect: false,
-  transports: ["websocket"], // Forces modern transport
+  transports: ["websocket"],
 });
 
-// Helper to log requests (Great for debugging)
 api.interceptors.request.use((request) => {
   console.log("📡 API Request:", request.method?.toUpperCase(), request.url);
   return request;

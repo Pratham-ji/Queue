@@ -6,14 +6,32 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
-  Platform,
+  Dimensions,
   Image,
+  ActivityIndicator, // 1. Added Loading Spinner
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import * as Animatable from "react-native-animatable";
+import { useNavigation } from "@react-navigation/native";
+import { api } from "../../services/api"; // 2. Import API
 
-// --- MOCK DATA (Ready for Backend Replacement) ---
+const { width } = Dimensions.get("window");
+
+// 🎨 THEME COLORS
+const COLORS = {
+  primary: "#10B981",
+  dark: "#064E3B",
+  bg: "#FFFFFF",
+  text: "#1E293B",
+  subText: "#64748B",
+  surface: "#F8FAFC",
+  border: "#E2E8F0",
+  selectedBg: "#ECFDF5",
+};
+
+// 🗓️ MOCK DATA
 const DATES = [
   { day: "Mon", date: "12", full: "2023-10-12" },
   { day: "Tue", date: "13", full: "2023-10-13" },
@@ -27,50 +45,67 @@ const MORNING_SLOTS = [
   "09:00 AM",
   "09:30 AM",
   "10:00 AM",
-  "10:45 AM",
-  "11:15 AM",
+  "10:30 AM",
+  "11:00 AM",
 ];
 const EVENING_SLOTS = [
   "04:00 PM",
   "04:30 PM",
   "05:00 PM",
-  "06:15 PM",
-  "07:00 PM",
+  "05:30 PM",
+  "06:00 PM",
+  "06:30 PM",
 ];
-
-const COLORS = {
-  primary: "#047857", // Trustworthy Emerald Green
-  background: "#FFFFFF",
-  textMain: "#111827",
-  textSub: "#6B7280",
-  border: "#E5E7EB",
-  surface: "#F9FAFB",
-};
 
 export default function BookingScreen() {
   const navigation = useNavigation<any>();
-  const route = useRoute<any>();
-
-  // In a real app, you'd fetch doctor details using this ID
-  const { doctorId } = route.params || {};
-
-  const [selectedDateIndex, setSelectedDateIndex] = useState(0);
+  const [selectedDate, setSelectedDate] = useState(0);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [isBooking, setIsBooking] = useState(false); // 3. Loading State
+
+  // 4. THE BACKEND CONNECTION LOGIC
+  const handleBooking = async () => {
+    if (!selectedSlot) return;
+
+    setIsBooking(true);
+    try {
+      const dateObj = DATES[selectedDate];
+
+      const payload = {
+        clinicId: "c86b8cc6-d4a3-4d30-acd6-98066ba616ee", // Using our test clinic
+        patientName: "Pratham Raj", // Hardcoded user for demo
+        date: dateObj.full,
+        time: selectedSlot,
+      };
+
+      const res = await api.post("/booking/create", payload);
+
+      if (res.data.success) {
+        Alert.alert("Success", "✅ Appointment Booked Successfully!", [
+          { text: "OK", onPress: () => navigation.navigate("Main") },
+        ]);
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "❌ Booking Failed. Please try again.");
+    } finally {
+      setIsBooking(false);
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
 
-      {/* 1. HEADER */}
+      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={styles.iconBtn}
-          activeOpacity={0.7}
+          style={styles.backBtn}
         >
-          <Ionicons name="arrow-back" size={24} color={COLORS.textMain} />
+          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Select Time Slot</Text>
+        <Text style={styles.headerTitle}>Select Time</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -78,53 +113,52 @@ export default function BookingScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* 2. DOCTOR CONTEXT CARD (Builds Confidence) */}
-        <View style={styles.doctorCard}>
+        {/* DOCTOR SUMMARY CARD */}
+        <Animatable.View
+          animation="fadeInDown"
+          duration={600}
+          style={styles.docCard}
+        >
           <Image
             source={{
-              uri: "https://i.pinimg.com/736x/8a/a3/95/8aa3952a550d99938c50d32f14376483.jpg",
+              uri: "https://img.freepik.com/free-photo/doctor-offering-medical-teleconsultation_23-2149329007.jpg",
             }}
-            style={styles.avatar}
+            style={styles.docImg}
           />
-          <View style={styles.doctorInfo}>
+          <View style={styles.docInfo}>
             <Text style={styles.docName}>Dr. Trafalgar Law</Text>
-            <Text style={styles.docSub}>
-              Ope Ope No Mi • Heart Pirates Clinic
-            </Text>
-            <View style={styles.verifiedRow}>
-              <Ionicons
-                name="checkmark-circle"
-                size={14}
-                color={COLORS.primary}
-              />
-              <Text style={styles.verifiedText}>Verified Surgeon</Text>
+            <Text style={styles.docSpec}>Heart Surgeon • 7 Yrs Exp</Text>
+            <View style={styles.ratingRow}>
+              <Ionicons name="star" size={14} color="#F59E0B" />
+              <Text style={styles.ratingText}>4.9</Text>
             </View>
           </View>
-        </View>
+        </Animatable.View>
 
-        {/* 3. DATE SELECTOR (Horizontal Strip) */}
-        <Text style={styles.sectionTitle}>Select Date</Text>
+        {/* 🗓️ CALENDAR STRIP */}
+        <Text style={styles.sectionTitle}>October 2023</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.dateScroll}
+          style={styles.calendarScroll}
         >
           {DATES.map((item, index) => {
-            const isActive = selectedDateIndex === index;
+            const isSelected = selectedDate === index;
             return (
               <TouchableOpacity
                 key={index}
-                style={[styles.dateBox, isActive && styles.activeDateBox]}
-                onPress={() => {
-                  setSelectedDateIndex(index);
-                  setSelectedSlot(null); // Clear slot to force re-selection
-                }}
-                activeOpacity={0.8}
+                style={[styles.dateBox, isSelected && styles.dateBoxSelected]}
+                onPress={() => setSelectedDate(index)}
+                activeOpacity={0.7}
               >
-                <Text style={[styles.dayText, isActive && styles.activeText]}>
+                <Text
+                  style={[styles.dayText, isSelected && styles.textSelected]}
+                >
                   {item.day}
                 </Text>
-                <Text style={[styles.dateText, isActive && styles.activeText]}>
+                <Text
+                  style={[styles.dateText, isSelected && styles.textSelected]}
+                >
                   {item.date}
                 </Text>
               </TouchableOpacity>
@@ -132,306 +166,207 @@ export default function BookingScreen() {
           })}
         </ScrollView>
 
-        {/* 4. SLOT GRID - Morning */}
-        <View style={styles.slotSection}>
-          <View style={styles.slotHeaderRow}>
-            <Ionicons name="sunny-outline" size={18} color={COLORS.textSub} />
-            <Text style={styles.slotHeaderTitle}>Morning</Text>
-          </View>
-          <View style={styles.grid}>
-            {MORNING_SLOTS.map((slot) => {
-              const isActive = selectedSlot === slot;
-              return (
-                <TouchableOpacity
-                  key={slot}
-                  style={[styles.slotChip, isActive && styles.activeSlotChip]}
-                  onPress={() => setSelectedSlot(slot)}
-                  activeOpacity={0.7}
+        {/* ☀️ MORNING SLOTS */}
+        <Animatable.View animation="fadeInUp" delay={200}>
+          <Text style={styles.sectionTitle}>Morning</Text>
+          <View style={styles.slotGrid}>
+            {MORNING_SLOTS.map((time, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.slotPill,
+                  selectedSlot === time && styles.slotSelected,
+                ]}
+                onPress={() => setSelectedSlot(time)}
+              >
+                <Text
+                  style={[
+                    styles.slotText,
+                    selectedSlot === time && styles.slotTextSelected,
+                  ]}
                 >
-                  <Text
-                    style={[styles.slotText, isActive && styles.activeSlotText]}
-                  >
-                    {slot}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+                  {time}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
-        </View>
+        </Animatable.View>
 
-        {/* 5. SLOT GRID - Evening */}
-        <View style={styles.slotSection}>
-          <View style={styles.slotHeaderRow}>
-            <Ionicons name="moon-outline" size={18} color={COLORS.textSub} />
-            <Text style={styles.slotHeaderTitle}>Evening</Text>
-          </View>
-          <View style={styles.grid}>
-            {EVENING_SLOTS.map((slot) => {
-              const isActive = selectedSlot === slot;
-              return (
-                <TouchableOpacity
-                  key={slot}
-                  style={[styles.slotChip, isActive && styles.activeSlotChip]}
-                  onPress={() => setSelectedSlot(slot)}
-                  activeOpacity={0.7}
+        {/* 🌙 EVENING SLOTS */}
+        <Animatable.View animation="fadeInUp" delay={300}>
+          <Text style={styles.sectionTitle}>Evening</Text>
+          <View style={styles.slotGrid}>
+            {EVENING_SLOTS.map((time, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.slotPill,
+                  selectedSlot === time && styles.slotSelected,
+                ]}
+                onPress={() => setSelectedSlot(time)}
+              >
+                <Text
+                  style={[
+                    styles.slotText,
+                    selectedSlot === time && styles.slotTextSelected,
+                  ]}
                 >
-                  <Text
-                    style={[styles.slotText, isActive && styles.activeSlotText]}
-                  >
-                    {slot}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+                  {time}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
-        </View>
+        </Animatable.View>
       </ScrollView>
 
-      {/* 6. BOTTOM ACTION BAR (Sticky) */}
-      <View style={styles.footer}>
-        <View style={styles.priceContainer}>
-          <Text style={styles.priceLabel}>Consultation Fee</Text>
-          <Text style={styles.price}>₹800</Text>
+      {/* FOOTER ACTION */}
+      <Animatable.View
+        animation="slideInUp"
+        duration={500}
+        style={styles.footer}
+      >
+        <View>
+          <Text style={styles.priceLabel}>Total Cost</Text>
+          <Text style={styles.priceValue}>$50.00</Text>
         </View>
 
         <TouchableOpacity
-          style={[styles.payBtn, !selectedSlot && styles.disabledBtn]}
-          disabled={!selectedSlot}
-          onPress={() => {
-            // Here is where you will eventually call your Backend API
-            alert(`Booking confirmed for ${selectedSlot}`);
-          }}
-          activeOpacity={0.9}
+          style={[
+            styles.bookBtn,
+            (!selectedSlot || isBooking) && styles.disabledBtn,
+          ]}
+          disabled={!selectedSlot || isBooking}
+          onPress={handleBooking} // 5. CONNECTED HANDLER
         >
-          <Text style={styles.payBtnText}>Confirm & Pay</Text>
-          <Ionicons
-            name="arrow-forward"
-            size={18}
-            color="#FFF"
-            style={{ marginLeft: 4 }}
-          />
+          {isBooking ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <Text style={styles.bookBtnText}>Confirm Booking</Text>
+          )}
         </TouchableOpacity>
-      </View>
+      </Animatable.View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  // Header
+  container: { flex: 1, backgroundColor: COLORS.bg },
+
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
-  iconBtn: {
-    padding: 8,
-    marginLeft: -8,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: COLORS.textMain,
-  },
+  headerTitle: { fontSize: 18, fontWeight: "700", color: COLORS.text },
+  backBtn: { padding: 8, borderRadius: 12, backgroundColor: COLORS.surface },
 
-  scrollContent: {
-    paddingBottom: 120, // Space for footer
-  },
+  scrollContent: { padding: 20, paddingBottom: 100 },
 
-  // Doctor Card
-  doctorCard: {
+  // DOC CARD
+  docCard: {
     flexDirection: "row",
-    alignItems: "center",
     padding: 16,
-    margin: 20,
     backgroundColor: COLORS.surface,
     borderRadius: 16,
+    marginBottom: 24,
+    alignItems: "center",
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#E5E7EB",
-  },
-  doctorInfo: {
-    marginLeft: 16,
-    flex: 1,
-  },
-  docName: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: COLORS.textMain,
-    marginBottom: 4,
-  },
-  docSub: {
-    fontSize: 12,
-    color: COLORS.textSub,
-    marginBottom: 6,
-  },
-  verifiedRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  verifiedText: {
-    fontSize: 12,
-    color: COLORS.primary,
-    fontWeight: "600",
-    marginLeft: 4,
-  },
+  docImg: { width: 60, height: 60, borderRadius: 30, marginRight: 16 },
+  docInfo: { flex: 1 },
+  docName: { fontSize: 16, fontWeight: "700", color: COLORS.text },
+  docSpec: { fontSize: 13, color: COLORS.subText, marginVertical: 4 },
+  ratingRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  ratingText: { fontSize: 12, fontWeight: "600", color: COLORS.text },
 
-  // Date Section
+  // CALENDAR
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: COLORS.textMain,
-    marginLeft: 20,
+    color: COLORS.text,
     marginBottom: 12,
+    marginTop: 12,
   },
-  dateScroll: {
+  calendarScroll: {
+    marginHorizontal: -20,
     paddingHorizontal: 20,
-    paddingBottom: 24,
+    marginBottom: 20,
   },
   dateBox: {
-    width: 64,
-    height: 76,
+    width: 60,
+    height: 70,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
-    backgroundColor: "#FFF",
-  },
-  activeDateBox: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-    // Soft Shadow
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  dayText: {
-    fontSize: 12,
-    color: COLORS.textSub,
-    fontWeight: "500",
-    marginBottom: 6,
-  },
-  dateText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.textMain,
-  },
-  activeText: {
-    color: "#FFF",
-  },
-
-  // Slot Grid
-  slotSection: {
-    marginBottom: 24,
-  },
-  slotHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginLeft: 20,
-    marginBottom: 12,
-  },
-  slotHeaderTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.textSub,
-    marginLeft: 8,
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    paddingHorizontal: 20,
-  },
-  slotChip: {
-    width: "31%", // 3 per row
-    paddingVertical: 12,
-    borderRadius: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 10,
-    marginRight: "2%", // Gap
   },
-  activeSlotChip: {
-    backgroundColor: "#ECFDF5", // Very light green
+  dateBoxSelected: {
+    backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
-  slotText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: COLORS.textMain,
-  },
-  activeSlotText: {
-    color: COLORS.primary,
-    fontWeight: "700",
-  },
+  dayText: { fontSize: 12, color: COLORS.subText, marginBottom: 4 },
+  dateText: { fontSize: 18, fontWeight: "700", color: COLORS.text },
+  textSelected: { color: "#FFF" },
 
-  // Sticky Footer
+  // SLOTS
+  slotGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 10,
+  },
+  slotPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    width: (width - 60) / 3,
+    alignItems: "center",
+  },
+  slotSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  slotText: { fontSize: 12, fontWeight: "600", color: COLORS.text },
+  slotTextSelected: { color: "#FFF" },
+
+  // FOOTER
   footer: {
     position: "absolute",
     bottom: 0,
-    left: 0,
-    right: 0,
+    width: "100%",
     backgroundColor: "#FFF",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    paddingBottom: Platform.OS === "ios" ? 34 : 20,
+    padding: 20,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    // Footer Shadow
+    alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.05,
-    shadowRadius: 10,
+    shadowRadius: 20,
     elevation: 10,
   },
-  priceContainer: {
-    justifyContent: "center",
+  priceLabel: { fontSize: 12, color: COLORS.subText },
+  priceValue: { fontSize: 24, fontWeight: "800", color: COLORS.text },
+
+  bookBtn: {
+    backgroundColor: COLORS.dark,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 16,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
   },
-  priceLabel: {
-    fontSize: 12,
-    color: COLORS.textSub,
-    marginBottom: 2,
-  },
-  price: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: COLORS.textMain,
-  },
-  payBtn: {
-    backgroundColor: COLORS.textMain, // Black button for contrast
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 30,
-  },
-  disabledBtn: {
-    backgroundColor: "#D1D5DB", // Greyed out
-  },
-  payBtnText: {
-    color: "#FFF",
-    fontSize: 14,
-    fontWeight: "600",
-    marginRight: 4,
-  },
+  disabledBtn: { backgroundColor: "#CBD5E1", shadowOpacity: 0 },
+  bookBtnText: { color: "#FFF", fontWeight: "700", fontSize: 16 },
 });

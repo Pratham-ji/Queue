@@ -1,401 +1,388 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
-  StyleSheet,
-  StatusBar,
-  ScrollView,
+  TextInput,
   TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  StatusBar,
   RefreshControl,
+  ScrollView,
+  Dimensions,
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as Animatable from "react-native-animatable";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useUserQueueStore } from "../../store/userQueueStore";
 
+const { width } = Dimensions.get("window");
+
+// 🎨 UNICORN THEME COLORS
 const COLORS = {
-  primary: "#047857", // Emerald Green
-  bg: "#F3F4F6", // Light Grey Background
-  surface: "#FFFFFF",
-  text: "#111827",
-  subText: "#6B7280",
-  accent: "#10B981", // Brighter Green for "Live" elements
+  primary: "#10B981",
+  dark: "#047857",
+  bg: "#F8FAFC",
+  text: "#0F172A",
+  subText: "#64748B",
+  white: "#FFFFFF",
+  inputBg: "#F1F5F9",
+  border: "#E2E8F0",
+  error: "#EF4444",
 };
 
 export default function QueueScreen() {
-  const [refreshing, setRefreshing] = useState(false);
+  const navigation = useNavigation();
+  const [name, setName] = useState("");
+  const {
+    joinQueue,
+    leaveQueue,
+    activeToken,
+    peopleAhead,
+    queueStatus,
+    isLoading,
+    refreshData,
+    estimatedWait,
+    currentServingToken,
+  } = useUserQueueStore();
 
-  // Mock Refresh Logic
-  const onRefresh = React.useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 2000);
-  }, []);
+  // 🔄 AUTO-SYNC: Fetch data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refreshData();
+    }, []),
+  );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
 
-      {/* 1. Header */}
+      {/* 🟢 HEADER WITH SMART BACK BUTTON */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Queue</Text>
-        <View style={styles.liveBadge}>
-          <View style={styles.dot} />
-          <Text style={styles.liveText}>LIVE UPDATES</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          {/* Only show Back Button if we pushed this screen (not via Tab) */}
+          {navigation.canGoBack() && (
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backBtn}
+            >
+              <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+          )}
+          <Text style={styles.headerTitle}>Queue Dashboard</Text>
         </View>
+
+        {queueStatus === "JOINED" && (
+          <TouchableOpacity onPress={refreshData} style={styles.refreshBtn}>
+            <Ionicons name="refresh" size={20} color={COLORS.primary} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={COLORS.primary}
+            refreshing={isLoading}
+            onRefresh={refreshData}
+            colors={[COLORS.primary]}
           />
         }
       >
-        {/* 2. THE TICKET CARD (Hero) */}
-        <View style={styles.ticketCard}>
-          {/* Hospital Info */}
-          <View style={styles.hospitalRow}>
-            <Ionicons name="location" size={16} color={COLORS.subText} />
-            <Text style={styles.hospitalName}>
-              Synergy Hospital • Cardiology
+        {/* DOCTOR CARD */}
+        <View style={styles.doctorCard}>
+          <View style={styles.docRow}>
+            <View style={styles.docAvatar}>
+              <Ionicons name="medkit" size={24} color={COLORS.primary} />
+            </View>
+            <View>
+              <Text style={styles.docName}>Dr. Trafalgar Law</Text>
+              <Text style={styles.docSub}>Heart & Surgery Clinic</Text>
+            </View>
+          </View>
+          <View style={styles.statusPill}>
+            <View style={styles.statusDot} />
+            <Text style={styles.statusText}>
+              {currentServingToken
+                ? `Serving Token #${currentServingToken}`
+                : "Clinic is Live"}
             </Text>
           </View>
-
-          <View style={styles.divider} />
-
-          {/* The Big Token */}
-          <View style={styles.tokenSection}>
-            <Text style={styles.tokenLabel}>YOUR TOKEN</Text>
-            <Text style={styles.tokenNumber}>#45</Text>
-            <View style={styles.etaContainer}>
-              <Ionicons name="time-outline" size={16} color="#FFF" />
-              <Text style={styles.etaText}>Est. Wait: 25 mins</Text>
-            </View>
-          </View>
-
-          {/* Current Status Footer */}
-          <View style={styles.ticketFooter}>
-            <View>
-              <Text style={styles.footerLabel}>Current Token</Text>
-              <Text style={styles.footerValue}>#42</Text>
-            </View>
-            <View style={styles.verticalLine} />
-            <View>
-              <Text style={styles.footerLabel}>People Ahead</Text>
-              <Text style={styles.footerValue}>2</Text>
-            </View>
-            <View style={styles.verticalLine} />
-            <View>
-              <Text style={styles.footerLabel}>Status</Text>
-              <Text style={[styles.footerValue, { color: COLORS.primary }]}>
-                On Time
-              </Text>
-            </View>
-          </View>
         </View>
 
-        {/* 3. TIMELINE (Visual Progress) */}
-        <Text style={styles.sectionTitle}>Queue Status</Text>
-        <View style={styles.timelineCard}>
-          {/* Step 1: Completed */}
-          <View style={styles.stepRow}>
-            <View style={styles.stepLeft}>
-              <View style={[styles.circle, styles.circleDone]}>
-                <Ionicons name="checkmark" size={14} color="#FFF" />
+        {queueStatus === "JOINED" ? (
+          // 🎫 ACTIVE TICKET DASHBOARD
+          <Animatable.View animation="fadeInUp" duration={500}>
+            <View style={styles.ticketCard}>
+              <View style={styles.ticketTop}>
+                <Text style={styles.ticketLabel}>YOUR TOKEN</Text>
+                <View style={styles.liveBadge}>
+                  <Text style={styles.liveText}>LIVE</Text>
+                </View>
               </View>
-              <View style={[styles.line, styles.lineDone]} />
-            </View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Checked In</Text>
-              <Text style={styles.stepTime}>10:45 AM</Text>
-            </View>
-          </View>
 
-          {/* Step 2: Active (Pulse Effect Concept) */}
-          <View style={styles.stepRow}>
-            <View style={styles.stepLeft}>
-              <View style={[styles.circle, styles.circleActive]}>
-                <View style={styles.innerDot} />
+              <Text style={styles.bigToken}>#{activeToken}</Text>
+
+              <View style={styles.divider} />
+
+              <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statVal}>{peopleAhead}</Text>
+                  <Text style={styles.statLabel}>People Ahead</Text>
+                </View>
+                <View style={styles.vertLine} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statVal}>~{estimatedWait}m</Text>
+                  <Text style={styles.statLabel}>Est. Wait</Text>
+                </View>
               </View>
-              <View style={styles.line} />
             </View>
-            <View style={styles.stepContent}>
-              <Text style={[styles.stepTitle, styles.textActive]}>
-                Waiting for Turn
+
+            {/* ALERT BOX */}
+            {peopleAhead === 0 ? (
+              <Animatable.View
+                animation="pulse"
+                iterationCount="infinite"
+                style={styles.alertBox}
+              >
+                <Ionicons name="notifications" size={22} color="#FFF" />
+                <Text style={styles.alertText}>
+                  It's your turn! Please go inside.
+                </Text>
+              </Animatable.View>
+            ) : (
+              <Text style={styles.helperText}>
+                We will notify you when your turn is near.
               </Text>
-              <Text style={styles.stepSub}>Doctor is seeing Token #42</Text>
-            </View>
-          </View>
+            )}
 
-          {/* Step 3: Future */}
-          <View style={styles.stepRow}>
-            <View style={styles.stepLeft}>
-              <View style={styles.circle} />
-            </View>
-            <View style={styles.stepContent}>
-              <Text style={[styles.stepTitle, styles.textFuture]}>
-                Consultation
-              </Text>
-              <Text style={styles.stepSub}>Approx 11:15 AM</Text>
-            </View>
-          </View>
-        </View>
+            <TouchableOpacity style={styles.cancelBtn} onPress={leaveQueue}>
+              <Text style={styles.cancelText}>Cancel Ticket</Text>
+            </TouchableOpacity>
+          </Animatable.View>
+        ) : (
+          // 📝 JOIN FORM
+          <Animatable.View
+            animation="fadeInUp"
+            duration={500}
+            style={styles.formCard}
+          >
+            <Text style={styles.formTitle}>Check In</Text>
+            <Text style={styles.formSub}>Join the queue from your phone.</Text>
 
-        {/* 4. HELP / ACTIONS */}
-        <TouchableOpacity style={styles.secondaryBtn}>
-          <Ionicons name="call-outline" size={20} color={COLORS.text} />
-          <Text style={styles.btnText}>Contact Reception</Text>
-        </TouchableOpacity>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Patient Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ex: John Doe"
+                placeholderTextColor={COLORS.subText}
+                value={name}
+                onChangeText={setName}
+              />
+            </View>
 
-        <TouchableOpacity
-          style={[
-            styles.secondaryBtn,
-            { marginTop: 12, borderColor: "#FEE2E2" },
-          ]}
-        >
-          <Ionicons name="close-circle-outline" size={20} color="#EF4444" />
-          <Text style={[styles.btnText, { color: "#EF4444" }]}>
-            Leave Queue
-          </Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.joinBtn, !name.trim() && styles.disabledBtn]}
+              onPress={() => joinQueue(name, "0000000000")}
+              disabled={!name.trim() || isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.joinText}>Get Ticket</Text>
+              )}
+            </TouchableOpacity>
+          </Animatable.View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.bg,
-  },
+  container: { flex: 1, backgroundColor: COLORS.bg },
+  scrollContent: { padding: 20 },
+
   header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: COLORS.bg,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    marginBottom: 10,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: COLORS.text,
+  headerTitle: { fontSize: 22, fontWeight: "700", color: COLORS.text },
+  backBtn: {
+    padding: 8,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  liveBadge: {
+  refreshBtn: { padding: 8, backgroundColor: "#E2E8F0", borderRadius: 10 },
+
+  // DOCTOR CARD
+  doctorCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  docRow: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
+  docAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: "#D1FAE5",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 16,
+  },
+  docName: { fontSize: 18, fontWeight: "700", color: COLORS.text },
+  docSub: { fontSize: 14, color: COLORS.subText },
+  statusPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#DCFCE7", // Light green
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    backgroundColor: "#F0FDF4",
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#86EFAC",
+    borderColor: "#BBF7D0",
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#16A34A",
-    marginRight: 6,
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.primary,
+    marginRight: 8,
   },
-  liveText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#16A34A",
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 100,
-  },
+  statusText: { fontSize: 12, fontWeight: "600", color: COLORS.dark },
 
   // TICKET CARD
   ticketCard: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.dark,
     borderRadius: 24,
     padding: 24,
-    marginBottom: 24,
-    // Deep Shadow for "Card" feel
     shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
   },
-  hospitalRow: {
+  ticketTop: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
   },
-  hospitalName: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: COLORS.subText,
-    marginLeft: 6,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+  ticketLabel: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  liveBadge: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  liveText: { color: "#FFF", fontSize: 10, fontWeight: "700" },
+  bigToken: {
+    fontSize: 80,
+    fontWeight: "800",
+    color: "#FFF",
+    textAlign: "center",
+    marginVertical: 20,
   },
   divider: {
     height: 1,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "rgba(255,255,255,0.1)",
     marginBottom: 20,
   },
-  tokenSection: {
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  tokenLabel: {
-    fontSize: 12,
-    color: COLORS.subText,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  tokenNumber: {
-    fontSize: 64, // HUGE FONT
-    fontWeight: "800",
-    color: COLORS.text,
-    letterSpacing: -2,
-    lineHeight: 70,
-  },
-  etaContainer: {
-    marginTop: 12,
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  etaText: {
-    color: "#FFF",
-    fontSize: 12,
-    fontWeight: "600",
-    marginLeft: 4,
-  },
-  ticketFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: "#F9FAFB",
-    borderRadius: 16,
-    padding: 16,
-  },
-  footerLabel: {
-    fontSize: 11,
-    color: COLORS.subText,
-    marginBottom: 4,
-  },
-  footerValue: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: COLORS.text,
-  },
-  verticalLine: {
+  statsRow: { flexDirection: "row", justifyContent: "space-between" },
+  statItem: { alignItems: "center", flex: 1 },
+  vertLine: {
     width: 1,
-    backgroundColor: "#E5E7EB",
+    height: "100%",
+    backgroundColor: "rgba(255,255,255,0.1)",
   },
+  statVal: { fontSize: 24, fontWeight: "700", color: "#FFF" },
+  statLabel: { fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 4 },
 
-  // TIMELINE
-  sectionTitle: {
-    fontSize: 16,
+  // FORM CARD
+  formCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  formTitle: {
+    fontSize: 20,
     fontWeight: "700",
     color: COLORS.text,
-    marginBottom: 16,
-    marginLeft: 4,
+    marginBottom: 6,
   },
-  timelineCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-  },
-  stepRow: {
-    flexDirection: "row",
-    marginBottom: 0, // Handled by minHeight
-    minHeight: 70,
-  },
-  stepLeft: {
-    alignItems: "center",
-    marginRight: 16,
-    width: 24,
-  },
-  circle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#E5E7EB",
-    backgroundColor: "#FFF",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 2,
-  },
-  circleDone: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  circleActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: "#ECFDF5",
-  },
-  innerDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: COLORS.primary,
-  },
-  line: {
-    width: 2,
-    flex: 1,
-    backgroundColor: "#E5E7EB",
-    marginVertical: 4,
-  },
-  lineDone: {
-    backgroundColor: COLORS.primary,
-  },
-  stepContent: {
-    flex: 1,
-    paddingTop: 2,
-  },
-  stepTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: COLORS.text,
-  },
-  stepTime: {
-    fontSize: 12,
-    color: COLORS.subText,
-    marginTop: 2,
-  },
-  stepSub: {
-    fontSize: 12,
-    color: COLORS.primary,
-    marginTop: 2,
-    fontWeight: "500",
-  },
-  textActive: {
-    color: COLORS.primary,
-  },
-  textFuture: {
-    color: "#9CA3AF",
-  },
-
-  // BUTTONS
-  secondaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.surface,
-    paddingVertical: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  btnText: {
+  formSub: { fontSize: 14, color: COLORS.subText, marginBottom: 24 },
+  inputGroup: { marginBottom: 24 },
+  label: {
     fontSize: 14,
     fontWeight: "600",
     color: COLORS.text,
-    marginLeft: 8,
+    marginBottom: 8,
   },
+  input: {
+    backgroundColor: COLORS.inputBg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: COLORS.text,
+  },
+  joinBtn: {
+    backgroundColor: COLORS.primary,
+    height: 56,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  disabledBtn: { backgroundColor: "#CBD5E1", shadowOpacity: 0 },
+  joinText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
+
+  // ALERTS
+  alertBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.primary,
+    padding: 16,
+    borderRadius: 16,
+    marginTop: 24,
+    justifyContent: "center",
+    gap: 10,
+  },
+  alertText: { color: "#FFF", fontWeight: "700", fontSize: 14 },
+  helperText: {
+    textAlign: "center",
+    color: COLORS.subText,
+    fontSize: 13,
+    marginTop: 24,
+  },
+  cancelBtn: { marginTop: 20, padding: 12, alignSelf: "center" },
+  cancelText: { color: COLORS.error, fontWeight: "600" },
 });

@@ -7,7 +7,7 @@ import {
   StatusBar,
   Keyboard,
   TouchableWithoutFeedback,
-  Platform, // <--- Ensure Platform is imported
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -50,7 +50,6 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      {/* Set translucent to false to force content below bar on Android */}
       <StatusBar
         barStyle="dark-content"
         backgroundColor="#FFFFFF"
@@ -64,6 +63,7 @@ export default function HomeScreen() {
             keyExtractor={(item) => item.id.toString()}
             ListHeaderComponent={
               <View style={styles.headerContainer}>
+                {/* 1. Search Bar */}
                 <SearchInput
                   value={searchQuery}
                   onChangeText={setSearchQuery}
@@ -73,6 +73,7 @@ export default function HomeScreen() {
                   containerStyle={styles.searchContainer}
                 />
 
+                {/* 2. Category Pills */}
                 <View style={styles.pillsSection}>
                   <CategoryPills
                     categories={["All", "Hospital", "Clinic", "Diagnostics"]}
@@ -81,6 +82,7 @@ export default function HomeScreen() {
                   />
                 </View>
 
+                {/* 3. Title Section (Clean, no banner) */}
                 <View style={styles.titleRow}>
                   <Text style={styles.sectionTitle}>
                     {searchQuery.length > 0
@@ -136,7 +138,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    // ANDROID FIX: Ensures the top bar is definitely below the notch
     paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
   listContent: {

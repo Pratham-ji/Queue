@@ -11,6 +11,19 @@ import otpRoutes from "./auth/otp.routes";
 
 // Existing Queue routes
 import queueRoutes from "./routes/queue.routes";
+import authRoutes from "./routes/auth.routes";
+import {
+  createSession,
+  joinSession,
+  getSessionDetails,
+  callNext,
+} from "./controllers/custom.controller";
+
+// ✅ FIX: Import BOTH functions here
+import {
+  createAppointment,
+  getMyAppointments,
+} from "./controllers/booking.controller";
 
 // Load Config
 dotenv.config();
@@ -18,7 +31,7 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
-// Initialize Socket.io (The "Pulse" of Queue Pro)
+// Initialize Socket.io
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -37,6 +50,18 @@ app.use("/api/queue", queueRoutes);
 
 // 🔥 OTP AUTH ROUTES (THIS WAS MISSING)
 app.use("/api/auth", otpRoutes);
+app.use("/api/auth", authRoutes); // This enables /api/auth/login
+
+// --- 🚦 ROUTES ---
+app.use("/api/queue", queueRoutes);
+
+app.post("/api/booking/create", createAppointment);
+app.get("/api/booking/my-appointments", getMyAppointments); // This will work now
+
+app.post("/api/custom/create", createSession);
+app.post("/api/custom/join", joinSession);
+app.get("/api/custom/:sessionId", getSessionDetails);
+app.post("/api/custom/next", callNext);
 
 // Health Check
 app.get("/", (req, res) => {
@@ -55,16 +80,20 @@ io.on("connection", (socket) => {
     console.log(`Socket ${socket.id} joined clinic ${clinicId}`);
   });
 
+  socket.on("join_session_room", (sessionId) => {
+    socket.join(`session_${sessionId}`);
+    console.log(`Socket joined session room: ${sessionId}`);
+  });
+
   socket.on("disconnect", () => {
     console.log(`Client disconnected: ${socket.id}`);
   });
 });
 
-// Make IO accessible globally
 app.set("io", io);
 
 // Start Server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => {
   console.log(`
   🚀 SERVER RUNNING

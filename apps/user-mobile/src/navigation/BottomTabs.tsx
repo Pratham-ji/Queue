@@ -68,12 +68,8 @@ export default function BottomTabs() {
         component={QueueScreen}
         options={{
           tabBarLabel: "Queue",
-          tabBarIcon: ({ focused, color }) => (
-            <Ionicons
-              name={focused ? "ticket" : "ticket-outline"}
-              size={24}
-              color={color}
-            />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="people-circle-outline" size={size} color={color} />
           ),
         }}
       />

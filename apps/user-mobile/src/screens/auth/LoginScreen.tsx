@@ -56,17 +56,21 @@ const SocialButton = ({
 export default function LoginScreen() {
   const navigation = useNavigation<any>();
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+
+  const handlePhoneChange = (value: string) => {
+    setPhoneNumber(value);
+    if (value.length > 0 && value.length < 10) {
+      setPhoneError(`${10 - value.length} more digit${10 - value.length !== 1 ? "s" : ""} needed`);
+    } else {
+      setPhoneError("");
+    }
+  };
 
   const handleContinue = () => {
-    if (phoneNumber.length < 10) {
-      alert("Please enter a valid phone number");
-      return;
+    if (phoneNumber.length === 10) {
+      navigation.replace("Main");
     }
-    else if (phoneNumber.length > 10) {
-      alert("Please enter a valid phone number");
-      return;
-    }
-    navigation.replace("Main");
   };
 
   return (
@@ -106,27 +110,50 @@ export default function LoginScreen() {
 
             {/* INPUT SECTION */}
             <View style={styles.inputContainer}>
-              <View style={styles.inputTop}>
-                <Text style={styles.inputLabel}>Country/Region</Text>
-                <View style={styles.countryRow}>
-                  <Text style={styles.countryText}>India (+91)</Text>
-                  <Ionicons name="chevron-down" size={16} color={COLORS.text} />
+              <View style={styles.inputRow}>
+                {/* Country/Region - Small Container */}
+                <View style={styles.countryContainer}>
+                  <Text style={styles.inputLabel}>Country</Text>
+                  <View style={styles.countryRow}>
+                    <Text style={styles.countryText}>India (+91)</Text>
+                    <Ionicons name="chevron-down" size={16} color={COLORS.text} />
+                  </View>
+                </View>
+
+                {/* Vertical Divider */}
+                <View style={styles.verticalDivider} />
+
+                {/* Phone Number - Large Container */}
+                <View style={styles.phoneContainer}>
+                  <Text style={styles.inputLabel}>Phone number</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="10-digit number"
+                    placeholderTextColor={COLORS.subText}
+                    keyboardType="phone-pad"
+                    value={phoneNumber}
+                    onChangeText={handlePhoneChange}
+                    maxLength={10}
+                    autoFocus={false}
+                  />
                 </View>
               </View>
-              <View style={styles.inputDivider} />
-              <View style={styles.inputBottom}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Phone number"
-                  placeholderTextColor={COLORS.subText}
-                  keyboardType="phone-pad"
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  // autoFocus can cause jitter on load in Android, set false
-                  autoFocus={false}
-                />
-              </View>
             </View>
+
+            {/* ERROR MESSAGE - Strong UI */}
+            {phoneError && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={16} color="#EF4444" style={styles.errorIcon} />
+                <Text style={styles.errorText}>{phoneError}</Text>
+              </View>
+            )}
+
+            {!phoneError && phoneNumber.length === 10 && (
+              <View style={styles.successContainer}>
+                <Ionicons name="checkmark-circle" size={16} color="#10B981" style={styles.successIcon} />
+                <Text style={styles.successText}>Phone number is valid</Text>
+              </View>
+            )}
 
             <Text style={styles.helperText}>
               We'll call or text you to confirm your number. Standard message
@@ -134,9 +161,10 @@ export default function LoginScreen() {
             </Text>
 
             <TouchableOpacity
-              style={styles.continueBtn}
+              style={[styles.continueBtn, phoneNumber.length !== 10 && styles.continueBtnDisabled]}
               onPress={handleContinue}
-              activeOpacity={0.8}
+              activeOpacity={phoneNumber.length === 10 ? 0.8 : 0.5}
+              disabled={phoneNumber.length !== 10}
             >
               <Text style={styles.continueText}>Continue</Text>
             </TouchableOpacity>
@@ -231,17 +259,36 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: 12,
     overflow: "hidden",
-    marginBottom: 8,
+    marginBottom: 12,
+    backgroundColor: COLORS.bg,
   },
-  inputTop: {
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
+  countryContainer: {
+    width: "28%",
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    backgroundColor: "#FAFAFA",
+    justifyContent: "center",
+  },
+  phoneContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     backgroundColor: "#FFF",
+    justifyContent: "center",
+  },
+  verticalDivider: {
+    width: 1,
+    backgroundColor: COLORS.border,
+    height: "100%",
   },
   inputLabel: {
     fontSize: 12,
     color: COLORS.subText,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   countryRow: {
     flexDirection: "row",
@@ -249,23 +296,57 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   countryText: {
-    fontSize: 16,
+    fontSize: 14,
     color: COLORS.text,
-  },
-  inputDivider: {
-    height: 1,
-    backgroundColor: COLORS.border,
-  },
-  inputBottom: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "#FFF",
+    fontWeight: "500",
   },
   textInput: {
     fontSize: 16,
     color: COLORS.text,
     height: 24,
     padding: 0,
+  },
+
+  // Error and Success States
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEE2E2",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: "#EF4444",
+  },
+  errorIcon: {
+    marginRight: 8,
+  },
+  errorText: {
+    fontSize: 13,
+    color: "#DC2626",
+    fontWeight: "500",
+    flex: 1,
+  },
+  successContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ECFDF5",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: "#10B981",
+  },
+  successIcon: {
+    marginRight: 8,
+  },
+  successText: {
+    fontSize: 13,
+    color: "#059669",
+    fontWeight: "500",
+    flex: 1,
   },
   helperText: {
     fontSize: 12,
@@ -286,6 +367,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
+  },
+  continueBtnDisabled: {
+    backgroundColor: "#D1D5DB",
+    shadowOpacity: 0,
+    elevation: 0,
   },
   continueText: {
     color: "#FFF",

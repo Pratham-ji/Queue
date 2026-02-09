@@ -563,7 +563,7 @@ const SignUpForm = ({
           <Ionicons name="lock-closed-outline" size={18} color={COLORS.primary} />
           <TextInput
             style={styles.signupInput}
-            placeholder="Min 8 characters, max 16"
+            placeholder="Enter your password"
             placeholderTextColor={COLORS.subText}
             secureTextEntry={!showPassword}
             value={formData.password}

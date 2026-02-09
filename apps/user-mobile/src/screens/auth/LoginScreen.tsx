@@ -69,7 +69,7 @@ export default function LoginScreen() {
 
   const handleContinue = () => {
     if (phoneNumber.length === 10) {
-      navigation.replace("Main");
+      navigation.navigate("OTPVerification", { phoneNumber });
     }
   };
 

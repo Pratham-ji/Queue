@@ -1,83 +1,98 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Linking,
+  SafeAreaView,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+/* 🩺 Medical / Hospital Colors */
 const COLORS = {
-  primary: "#047857",
-  text: "#111827",
+  primary: "#0F766E",        // medical green
+  lightGreen: "#E7F5F2",
+  text: "#0F172A",
   subText: "#6B7280",
-  bg: "#F3F4F6",
+  bg: "#F1F5F9",
   surface: "#FFFFFF",
   border: "#E5E7EB",
-  danger: "#EF4444",
-  info: "#3B82F6",
+  info: "#2563EB",
 };
 
 export default function HelpCenter({ onClose }: { onClose?: () => void }) {
   return (
-    <View style={styles.container}>
-      {/* HEADER */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Help & Support</Text>
-        <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-          <Ionicons name="close-circle" size={28} color={COLORS.subText} />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+    <SafeAreaView style={styles.safe}>
+      {/* FULL SCREEN CURVED PAGE */}
+      <View style={styles.curvedContainer}>
         
-        {/* 1. HOW TO BOOK */}
-        <Section title="How to book an appointment?" icon="calendar-outline">
-          <Step text="Search & Select: Find your preferred doctor or clinic by name, specialty, or location." />
-          <Step text="Real-time Slots: Choose a date and an available time slot that fits your schedule." />
-          <Step text="Instant Confirmation: Once you book, you’ll receive a 'Queue ID' and a real-time ETA." />
-          <Step text="One-tap Booking: Re-book your previous doctors directly from your profile history." />
-        </Section>
-
-        {/* 2. HOW QUEUE WORKS */}
-        <Section title="How the queue works?" icon="people-outline">
-          <Step text="Virtual Check-in: Your phone is your ticket; no need to stand in physical lines." />
-          <Step text="Live Tracking: See exactly how many people are ahead of you in real-time." />
-          <Step text="Smart Notifications: Get an alert when you are '3rd in line' to head to the clinic." />
-          <Step text="Buffer Management: The system adjusts ETA automatically based on appointment progress." />
-        </Section>
-
-        {/* 3. CANCELLATION POLICY */}
-        <Section title="Cancellation Policy" icon="shield-alert-outline">
-          <Step text="Slot Integrity: Once booked, the time is strictly blocked for you, preventing others from access." />
-          <Step text="No-Show Policy: We encourage rescheduling rather than cancellation within 2 hours." />
-          <Step text="Refund Policy: Payments for confirmed slots are non-refundable to ensure commitment." />
-        </Section>
-
-        {/* 4. CONTACT SUPPORT */}
-        <View style={styles.contactCard}>
-          <Text style={styles.contactTitle}>Still need help?</Text>
-          <Text style={styles.contactSub}>Our team is available 24/7</Text>
-          
-          <TouchableOpacity 
-            style={styles.contactAction} 
-            onPress={() => Linking.openURL('mailto:support@queueapp.com')}
-          >
-            <Ionicons name="mail-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.actionText}>support@queueapp.com</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.contactAction} 
-            onPress={() => Linking.openURL('tel:+9196xxxxxxx89')}
-          >
-            <Ionicons name="call-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.actionText}>+91 96348 92889</Text>
+        {/* HEADER */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Help & Support</Text>
+          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <Ionicons name="close" size={26} color={COLORS.subText} />
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.footerText}>Queue Pro Support • Dehradun</Text>
-      </ScrollView>
-    </View>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {/* 1. HOW TO BOOK */}
+          <Section title="How to book an appointment?" icon="calendar-outline">
+            <Step text="Search & Select: Find your preferred doctor or clinic by name, specialty, or location." />
+            <Step text="Real-time Slots: Choose a date and an available time slot that fits your schedule." />
+            <Step text="Instant Confirmation: Once you book, you’ll receive a Queue ID and live ETA." />
+            <Step text="One-tap Booking: Re-book doctors directly from your history." />
+          </Section>
+
+          {/* 2. QUEUE */}
+          <Section title="How the queue works?" icon="people-outline">
+            <Step text="Virtual Check-in: Your phone acts as your queue token." />
+            <Step text="Live Tracking: See how many patients are ahead of you." />
+            <Step text="Smart Alerts: Get notified when it’s almost your turn." />
+            <Step text="Auto ETA: Queue time adjusts automatically." />
+          </Section>
+
+          {/* 3. CANCELLATION */}
+          <Section title="Cancellation Policy" icon="shield-checkmark-outline">
+            <Step text="Slots are reserved exclusively once booked." />
+            <Step text="Reschedule instead of cancelling within 2 hours." />
+            <Step text="Confirmed bookings are non-refundable." />
+          </Section>
+
+          {/* CONTACT */}
+          <View style={styles.contactCard}>
+            <Text style={styles.contactTitle}>Still need help?</Text>
+            <Text style={styles.contactSub}>Our medical support team is available 24/7</Text>
+
+            <TouchableOpacity
+              style={styles.contactAction}
+              onPress={() => Linking.openURL("mailto:support@queueapp.com")}
+            >
+              <Ionicons name="mail-outline" size={20} color={COLORS.primary} />
+              <Text style={styles.actionText}>support@queueapp.com</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.contactAction}
+              onPress={() => Linking.openURL("tel:+919634892889")}
+            >
+              <Ionicons name="call-outline" size={20} color={COLORS.primary} />
+              <Text style={styles.actionText}>+91 96348 92889</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.footerText}>Queue Pro Medical Support • Dehradun</Text>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 }
 
-// Reusable Section Component
+/* SECTION */
 const Section = ({ title, icon, children }: any) => (
   <View style={styles.section}>
     <View style={styles.sectionHeader}>
@@ -88,7 +103,7 @@ const Section = ({ title, icon, children }: any) => (
   </View>
 );
 
-// Reusable Step/Bullet Component
+/* STEP */
 const Step = ({ text }: { text: string }) => (
   <View style={styles.stepRow}>
     <View style={styles.bullet} />
@@ -96,55 +111,73 @@ const Step = ({ text }: { text: string }) => (
   </View>
 );
 
+/* 🎨 STYLES */
 const styles = StyleSheet.create({
-  container: {
+  safe: {
+    flex: 1,
+    backgroundColor: COLORS.primary,
+  },
+
+  curvedContainer: {
     flex: 1,
     backgroundColor: COLORS.bg,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    overflow: "hidden",
   },
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     padding: 20,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderColor: COLORS.border,
   },
+
   headerTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "800",
     color: COLORS.text,
   },
+
   closeBtn: {
-    padding: 4,
+    padding: 6,
   },
+
   scrollContent: {
     padding: 20,
+    paddingBottom: 40,
   },
+
   section: {
     backgroundColor: COLORS.surface,
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 16,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
+
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 12,
   },
+
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
     color: COLORS.text,
     marginLeft: 10,
   },
+
   stepRow: {
     flexDirection: "row",
     marginBottom: 10,
-    paddingRight: 10,
   },
+
   bullet: {
     width: 6,
     height: 6,
@@ -153,49 +186,56 @@ const styles = StyleSheet.create({
     marginTop: 7,
     marginRight: 10,
   },
+
   stepText: {
     fontSize: 13,
     color: COLORS.subText,
     lineHeight: 18,
     flex: 1,
   },
+
   contactCard: {
-    backgroundColor: COLORS.text, // Dark card for contrast
-    borderRadius: 16,
+    backgroundColor: COLORS.primary,
+    borderRadius: 20,
     padding: 20,
     alignItems: "center",
   },
+
   contactTitle: {
     color: "#FFF",
     fontSize: 18,
     fontWeight: "700",
     marginBottom: 4,
   },
+
   contactSub: {
-    color: "#9CA3AF",
+    color: "#D1FAE5",
     fontSize: 12,
     marginBottom: 16,
+    textAlign: "center",
   },
+
   contactAction: {
     flexDirection: "row",
     backgroundColor: "#FFF",
     width: "100%",
-    padding: 12,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 10,
   },
+
   actionText: {
     marginLeft: 10,
     fontWeight: "600",
     color: COLORS.text,
   },
+
   footerText: {
     textAlign: "center",
-    color: "#9CA3AF",
+    color: COLORS.subText,
     fontSize: 11,
-    marginTop: 20,
-    marginBottom: 40,
-  }
+    marginTop: 24,
+  },
 });

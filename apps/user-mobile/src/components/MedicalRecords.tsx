@@ -1,47 +1,117 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+
+/* 🩺 Medical / Hospital Colors */
 const COLORS = {
-  primary: "#047857",
-  text: "#111827",
+  primary: "#0F766E",
+  lightGreen: "#E7F5F2",
+  text: "#0F172A",
   subText: "#6B7280",
-  bg: "#F3F4F6",
+  bg: "#F1F5F9",
   surface: "#FFFFFF",
   border: "#E5E7EB",
-  danger: "#EF4444",
 };
 
-// Medical Records reusable component
-export default function MedicalRecords({ onClose }: { onClose?: () => void }) {
+export default function MedicalRecords({
+  onClose,
+}: {
+  onClose?: () => void;
+}) {
   return (
-    <View style={styles.card}>
-      <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-        <Text style={styles.closeText}>Close</Text>
-      </TouchableOpacity>
-      <Text style={styles.text}>
-          Coming Soon.......
-      </Text>
-    </View>
+    <SafeAreaView style={styles.safe}>
+      {/* FULL SCREEN CURVED PAGE */}
+      <View style={styles.curvedContainer}>
+        {/* HEADER */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Medical Records</Text>
+          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <Ionicons name="close" size={26} color={COLORS.subText} />
+          </TouchableOpacity>
+        </View>
+
+        {/* CONTENT */}
+        <View style={styles.centerContent}>
+          <View style={styles.card}>
+            <Text style={styles.comingSoon}>Coming Soon</Text>
+            <Text style={styles.subText}>
+              Your medical history and reports will be available here.
+            </Text>
+          </View>
+        </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
+/* 🎨 STYLES */
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: COLORS.surface,
-    marginHorizontal: 20,
-    borderRadius: 16,
+  safe: {
+    flex: 1,
+    backgroundColor: COLORS.primary,
+  },
+
+  curvedContainer: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+  },
+
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 20,
   },
-  text: {
+
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: COLORS.text,
+  },
+
+  closeBtn: {
+    padding: 6,
+  },
+
+  centerContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+
+  card: {
+    backgroundColor: COLORS.surface,
+    width: "100%",
+    borderRadius: 20,
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+
+  comingSoon: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: COLORS.primary,
+    marginBottom: 10,
+  },
+
+  subText: {
     fontSize: 14,
     color: COLORS.subText,
     textAlign: "center",
-  },
-  closeBtn: {
-    alignSelf: "flex-end",
-    padding: 12,
-  },
-  closeText: {
-    color: COLORS.primary,
-    fontWeight: "600",
   },
 });

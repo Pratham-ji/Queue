@@ -20,6 +20,7 @@ import LoginSecurity from "../../components/LoginSecurity";
 import HelpCenter from "../../components/HelpCenter";
 import PrivacyTerms from "../../components/PrivacyTerms";
 import MedicalRecords from "../../components/MedicalRecords";
+import ReferAndEarn from "../../components/ReferAndEarn";
 
 // --- THEME ---
 const COLORS = {
@@ -76,14 +77,17 @@ export default function ProfileScreen() {
 
   // Helper to render the active component inside a Modal
   const renderComponent = () => {
-    switch (activeComponent) {
-      case "Personal": return <PersonalInformation onClose={() => setActiveComponent(null)} />;
-      case "Security": return <LoginSecurity onClose={() => setActiveComponent(null)} />;
-      case "Help": return <HelpCenter onClose={() => setActiveComponent(null)} />;
-      case "Privacy": return <PrivacyTerms onClose={() => setActiveComponent(null)} />;
-      case "Medical": return <MedicalRecords onClose={() => setActiveComponent(null)} />;
-      default: return null;
-    }
+    const componentMap: Record<string, any> = {
+      Personal: PersonalInformation,
+      Security: LoginSecurity,
+      Help: HelpCenter,
+      Privacy: PrivacyTerms,
+      ReferAndEarn: ReferAndEarn,
+      Medical: MedicalRecords,
+    };
+    if (!activeComponent) return null;
+    const ActiveComp: any = componentMap[activeComponent];
+    return ActiveComp ? <ActiveComp onClose={() => setActiveComponent(null)} /> : null;
   };
 
   return (

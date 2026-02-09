@@ -1,63 +1,183 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+} from "react-native";
+
+/* 🎨 Hospital App Colors */
 const COLORS = {
-  primary: "#047857",
+  primary: "#0F766E",
+  lightGreen: "#E7F5F2",
+  dark: "#0F172A",
   text: "#111827",
   subText: "#6B7280",
-  bg: "#F3F4F6",
+  bg: "#F1F5F9",
   surface: "#FFFFFF",
   border: "#E5E7EB",
-  danger: "#EF4444",
 };
 
-// Login & Security reusable component
-export default function LoginSecurity({ onClose }: { onClose?: () => void }) {
+export default function LoginSecurity() {
   return (
-    <View style={styles.card}>
-      <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-        <Text style={styles.closeText}>Close</Text>
-      </TouchableOpacity>
-      <Row label="Password" value="Last changed 2 months ago" />
-      <Row label="Active Devices" value="2 devices logged in" />
-      <Row label="Two-Factor Authentication" value="Disabled" />
-    </View>
+    <SafeAreaView style={styles.safe}>
+      {/* FULL SCREEN CURVED CONTAINER */}
+      <View style={styles.curvedContainer}>
+        {/* PAGE TITLE */}
+        <Text style={styles.pageTitle}>Login & Security</Text>
+
+        {/* LOGIN CARD */}
+        <View style={styles.card}>
+          <CardHeader title="Login Details" />
+
+          <SecurityRow
+            title="Password"
+            subtitle="Last changed 2 months ago"
+            action="Change"
+          />
+
+          <SecurityRow
+            title="Email Address"
+            subtitle="satyam****@gmail.com"
+            action="Update"
+          />
+        </View>
+
+        {/* SECURITY CARD */}
+        <View style={styles.card}>
+          <CardHeader title="Security Settings" />
+
+          <SecurityRow
+            title="Two-Factor Authentication"
+            subtitle="Protect your account with OTP"
+            action="Enable"
+            highlight
+          />
+
+          <SecurityRow
+            title="Active Devices"
+            subtitle="2 devices currently logged in"
+            action="View"
+          />
+
+          <SecurityRow
+            title="Login Alerts"
+            subtitle="Get alerts for new logins"
+            action="On"
+            success
+          />
+        </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
-const Row = ({ label, value }: any) => (
-  <View style={styles.row}>
-    <Text style={styles.label}>{label}</Text>
-    <Text style={styles.value}>{value}</Text>
+/* 🔹 Card Header */
+const CardHeader = ({ title }: { title: string }) => (
+  <View style={styles.cardHeader}>
+    <Text style={styles.cardHeaderText}>{title}</Text>
   </View>
 );
 
+/* 🔁 Security Row */
+const SecurityRow = ({
+  title,
+  subtitle,
+  action,
+  highlight,
+  success,
+}: any) => (
+  <TouchableOpacity style={styles.row} activeOpacity={0.85}>
+    <View style={{ flex: 1 }}>
+      <Text style={styles.rowTitle}>{title}</Text>
+      <Text style={styles.rowSub}>{subtitle}</Text>
+    </View>
+
+    <Text
+      style={[
+        styles.action,
+        (highlight || success) && { color: COLORS.primary },
+      ]}
+    >
+      {action}
+    </Text>
+  </TouchableOpacity>
+);
+
+/* 🎨 Styles */
 const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: COLORS.primary,
+  },
+
+  /* FULL SCREEN CURVED PAGE */
+  curvedContainer: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingTop: 32,
+    paddingHorizontal: 16,
+  },
+
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: COLORS.dark,
+    marginBottom: 20,
+  },
+
   card: {
     backgroundColor: COLORS.surface,
-    marginHorizontal: 20,
-    borderRadius: 16,
+    borderRadius: 18,
+    marginBottom: 22,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+    overflow: "hidden",
   },
+
+  cardHeader: {
+    backgroundColor: COLORS.lightGreen,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+  },
+
+  cardHeaderText: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: COLORS.primary,
+  },
+
   row: {
-    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 18,
+    paddingHorizontal: 18,
     borderBottomWidth: 1,
     borderColor: COLORS.border,
   },
-  label: {
+
+  rowTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+
+  rowSub: {
     fontSize: 13,
     color: COLORS.subText,
-  },
-  value: {
-    fontSize: 15,
-    color: COLORS.text,
     marginTop: 4,
-    fontWeight: "500",
   },
-  closeBtn: {
-    alignSelf: "flex-end",
-    padding: 12,
-  },
-  closeText: {
-    color: COLORS.primary,
-    fontWeight: "600",
+
+  action: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.subText,
+    marginLeft: 12,
   },
 });

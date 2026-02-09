@@ -10,6 +10,7 @@ import {
   StatusBar,
   Dimensions,
   Keyboard,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,6 +28,8 @@ const COLORS = {
 export default function OTPVerificationScreen({ route }: any) {
   const navigation = useNavigation<any>();
   const phoneNumber = route?.params?.phoneNumber || "1234567890";
+  const source = route?.params?.source || "login"; // 'login' or 'signup'
+  const signUpData = route?.params?.signUpData; // User data for signup flow
   
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
@@ -110,10 +113,15 @@ export default function OTPVerificationScreen({ route }: any) {
 
     setIsVerifying(true);
     
-    // Simulate API call
     try {
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      // On success, navigate to Main
+      
+      // For signup flow, pass the signUpData along
+      if (source === "signup" && signUpData) {
+        // You can call your API here with signUpData and OTP
+        console.log("Sign up data with OTP verification:", signUpData, otp.join(""));
+      }
+      
       navigation.replace("Main");
     } catch (err) {
       setError("Invalid OTP. Please try again.");
@@ -126,8 +134,18 @@ export default function OTPVerificationScreen({ route }: any) {
     setOtp(["", "", "", "", "", ""]);
     setError("");
     inputRefs.current[0]?.focus();
-    // Here you would typically call an API to resend OTP
     console.log("Resend OTP to", phoneNumber);
+  };
+
+  // Handle go back
+  const handleGoBack = () => {
+    if (source === "signup") {
+      // Go back to signup form
+      navigation.goBack();
+    } else {
+      // Go back to login form
+      navigation.goBack();
+    }
   };
 
   return (
@@ -146,22 +164,31 @@ export default function OTPVerificationScreen({ route }: any) {
           {/* HEADER */}
           <View style={styles.header}>
             <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.backBtn}
+              onPress={handleGoBack}
+              style={styles.closeBtn}
             >
-              <Ionicons name="chevron-back" size={24} color={COLORS.text} />
+              <Ionicons name="close" size={24} color={COLORS.text} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Verify phone number</Text>
+            <Text style={styles.headerTitle}>Queue</Text>
             <View style={{ width: 24 }} />
           </View>
 
-          <View style={styles.content}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            scrollEventThrottle={16}
+          >
             {/* WELCOME TEXT */}
-            <Text style={styles.welcomeText}>Enter verification code</Text>
+            <Text style={styles.welcomeText}>Verify Phone Number</Text>
 
             {/* PHONE NUMBER DISPLAY */}
             <View style={styles.phoneDisplayContainer}>
-              <Ionicons name="checkmark-circle-outline" size={20} color={COLORS.primary} />
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={20}
+                color={COLORS.primary}
+              />
               <Text style={styles.phoneDisplayText}>
                 Code sent to {formatPhoneNumber(phoneNumber)}
               </Text>
@@ -206,7 +233,19 @@ export default function OTPVerificationScreen({ route }: any) {
               </View>
             )}
 
-            {/* HELPER TEXT */}
+            {/* SUCCESS MESSAGE */}
+            {isOTPComplete && !error && (
+              <View style={styles.successContainer}>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={16}
+                  color="#10B981"
+                  style={styles.successIcon}
+                />
+                <Text style={styles.successText}>OTP is complete</Text>
+              </View>
+            )}
+
             <Text style={styles.helperText}>
               Didn't receive a code? Check your phone or{" "}
               <Text
@@ -237,14 +276,17 @@ export default function OTPVerificationScreen({ route }: any) {
               )}
             </TouchableOpacity>
 
-            {/* BACK TO LOGIN */}
+            {/* CHANGE PHONE BUTTON */}
             <TouchableOpacity
               style={styles.changePhoneBtn}
-              onPress={() => navigation.goBack()}
+              onPress={handleGoBack}
             >
               <Text style={styles.changePhoneText}>Use a different number</Text>
             </TouchableOpacity>
-          </View>
+
+            {/* Bottom spacer for scrolling */}
+            <View style={{ height: 40 }} />
+          </ScrollView>
         </SafeAreaView>
       </KeyboardAvoidingView>
     </View>
@@ -270,25 +312,27 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F3F4F6",
     backgroundColor: COLORS.bg,
   },
-  backBtn: {
+  closeBtn: {
     padding: 4,
-    marginLeft: -8,
+    marginLeft: -4,
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: COLORS.text,
+    fontSize: 18,
+    fontWeight: "800",
+    color: COLORS.primary,
+    letterSpacing: 0.5,
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 20,
+
+  scrollContent: {
+    padding: 24,
+    paddingTop: 12,
+    flexGrow: 1,
   },
   welcomeText: {
-    fontSize: 22,
-    fontWeight: "700",
+    fontSize: 24,
+    fontWeight: "800",
     color: COLORS.text,
-    marginBottom: 8,
+    marginBottom: 16,
     marginTop: 10,
   },
 
@@ -344,7 +388,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FEE2E2",
   },
 
-  // Error Container
+  // Error and Success States
   errorContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -365,6 +409,26 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     flex: 1,
   },
+  successContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ECFDF5",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: "#10B981",
+  },
+  successIcon: {
+    marginRight: 8,
+  },
+  successText: {
+    fontSize: 13,
+    color: "#059669",
+    fontWeight: "500",
+    flex: 1,
+  },
 
   // Helper Text
   helperText: {
@@ -372,7 +436,6 @@ const styles = StyleSheet.create({
     color: COLORS.subText,
     lineHeight: 18,
     marginBottom: 24,
-    textAlign: "center",
   },
   helperLink: {
     color: COLORS.primary,
@@ -384,15 +447,16 @@ const styles = StyleSheet.create({
   verifyBtn: {
     backgroundColor: COLORS.primary,
     paddingVertical: 16,
+    paddingHorizontal: 20,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 5,
     minHeight: 56,
   },
   verifyBtnDisabled: {
@@ -410,6 +474,7 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 16,
     fontWeight: "700",
+    letterSpacing: 0.3,
   },
   spinner: {
     width: 16,

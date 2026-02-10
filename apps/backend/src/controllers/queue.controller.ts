@@ -2,10 +2,11 @@ import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { AuthRequest } from "../middleware/auth.middleware";
 
-// Initialize the Database Client
 const prisma = new PrismaClient();
 
-// GET QUEUE (Read from Real Database)
+// ==========================================
+// 1. GET QUEUE (Robust Version)
+// ==========================================
 export const getQueue = async (req: Request, res: Response) => {
   try {
     const clinicId = req.params.clinicId as string;
@@ -34,15 +35,19 @@ export const getQueue = async (req: Request, res: Response) => {
   }
 };
 
-// CALL NEXT PATIENT (Update Real Database)
+// ==========================================
+// 2. CALL NEXT PATIENT (Triggers Auto-Refresh)
+// ==========================================
 export const callNextPatient = async (req: Request, res: Response) => {
   try {
-    const clinic = await prisma.clinic.findFirst();
-    if (!clinic) return res.status(404).json({ message: "No clinic found" });
+    const clinicId = req.params.clinicId as string;
 
-    // 1. Find the next person in line
+    // 1. Find who is next
     const nextPatient = await prisma.patient.findFirst({
-      where: { clinicId: clinic.id, status: "WAITING" },
+      where: {
+        clinicId: clinicId,
+        status: "WAITING",
+      },
       orderBy: { token: "asc" },
     });
 
@@ -52,7 +57,7 @@ export const callNextPatient = async (req: Request, res: Response) => {
         .json({ success: false, message: "Queue is empty" });
     }
 
-    // 2. Update their status to SERVING
+    // 2. Update status to SERVING
     const served = await prisma.patient.update({
       where: { id: nextPatient.id },
       data: {
@@ -61,53 +66,63 @@ export const callNextPatient = async (req: Request, res: Response) => {
       },
     });
 
-    // 3. Notify Mobile App (Socket.io)
-    // We send the *remaining* waiting list to update the screen
+    // 3. BROADCAST TO ALL APPS (User & Doctor)
     const io = req.app.get("io");
+
+    // A. Send new Waiting List
     const remainingQueue = await prisma.patient.findMany({
-      where: { clinicId: clinic.id, status: "WAITING" },
+      where: { clinicId: clinicId, status: "WAITING" },
       orderBy: { token: "asc" },
     });
 
+    // 📢 Event 1: Updates the list
     io.emit("queue_update", remainingQueue);
 
+    // 📢 Event 2: Updates "Now Serving" dashboard
+    io.emit("current_patient", served);
+
+    console.log(`✅ Called Next: Token #${served.token}`);
     res.status(200).json({ success: true, served });
-  } catch (error) {
-    console.error(error);
+  } catch (error: any) {
+    console.error("❌ Error calling next:", error.message || error);
     res.status(500).json({ success: false, error: "Error calling next" });
   }
 };
 
-// ADD PATIENT (Write to Real Database + Socket Emit)
+// ==========================================
+// 3. ADD PATIENT
+// ==========================================
 export const addPatient = async (req: Request, res: Response) => {
   try {
     const { name, phone } = req.body;
+    const clinicId = req.params.clinicId as string;
 
     if (!name) return res.status(400).json({ error: "Name is required" });
 
-    // 1. Find the clinic (In a real app, this comes from the logged-in user)
-    const clinic = await prisma.clinic.findFirst();
+    const clinic = await prisma.clinic.findUnique({
+      where: { id: clinicId },
+    });
+
     if (!clinic) return res.status(404).json({ error: "Clinic not found" });
 
-    // 2. Generate the next Token Number (Count current patients + 1)
-    // We count *all* patients created today to make a unique token
+    // Generate Token
     const todayCount = await prisma.patient.count({
       where: { clinicId: clinic.id },
     });
     const token = todayCount + 1;
 
-    // 3. Create the Patient in AWS
+    // Create Patient
     const newPatient = await prisma.patient.create({
       data: {
         name,
-        phone: phone || "", // Phone is optional
+        phone: phone || "",
         token,
         status: "WAITING",
         clinicId: clinic.id,
       },
     });
 
-    // 4. REAL-TIME UPDATE: Tell everyone the queue changed
+    // Notify Everyone
     const io = req.app.get("io");
     const updatedQueue = await prisma.patient.findMany({
       where: { clinicId: clinic.id, status: "WAITING" },
@@ -117,8 +132,8 @@ export const addPatient = async (req: Request, res: Response) => {
     io.emit("queue_update", updatedQueue);
 
     res.status(201).json({ success: true, data: newPatient });
-  } catch (error) {
-    console.error("Error adding patient:", error);
+  } catch (error: any) {
+    console.error("❌ Error adding patient:", error.message || error);
     res.status(500).json({ success: false, error: "Failed to add patient" });
   }
 };

@@ -19,7 +19,7 @@ import testRoutes from "./routes/test.routes"
 const app = express();
 const server = http.createServer(app);
 
-// Initialize Socket.io (The "Pulse" of Queue Pro)
+// Initialize Socket.io
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -57,16 +57,20 @@ io.on("connection", (socket) => {
     console.log(`Socket ${socket.id} joined clinic ${clinicId}`);
   });
 
+  socket.on("join_session_room", (sessionId) => {
+    socket.join(`session_${sessionId}`);
+    console.log(`Socket joined session room: ${sessionId}`);
+  });
+
   socket.on("disconnect", () => {
     console.log(`Client disconnected: ${socket.id}`);
   });
 });
 
-// Make IO accessible globally
 app.set("io", io);
 
 // Start Server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => {
   console.log(`
   🚀 SERVER RUNNING

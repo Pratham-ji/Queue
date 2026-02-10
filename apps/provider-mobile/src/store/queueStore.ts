@@ -11,6 +11,9 @@ export interface Patient {
   arrivalTime: string;
 }
 
+// 🔑 YOUR REAL CLINIC ID
+const CLINIC_ID = "c86b8cc6-d4a3-4d30-acd6-98066ba616ee";
+
 interface QueueState {
   currentPatient: Patient | null;
   queue: Patient[];
@@ -23,6 +26,7 @@ interface QueueState {
   initializeSocket: () => void;
 }
 
+// ✅ EXPORT NAME MUST BE 'useQueueStore'
 export const useQueueStore = create<QueueState>((set, get) => ({
   currentPatient: null,
   queue: [],
@@ -31,7 +35,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
   // 1. FETCH FROM BACKEND
   fetchQueue: async () => {
     try {
-      const res = await api.get("/queue/clinic_1"); // 'clinic_1' is a placeholder ID
+      const res = await api.get(`/queue/${CLINIC_ID}`);
       if (res.data.success) {
         set({ queue: res.data.data });
       }
@@ -48,31 +52,29 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     set({ isOnline: newState });
 
     if (newState) {
-      socket.connect();
-      socket.emit("join_clinic", "clinic_1");
-      console.log("🟢 Socket Connected");
+      if (!socket.connected) socket.connect();
+      socket.emit("join_clinic", CLINIC_ID);
+      console.log("🟢 Socket Connected to Clinic:", CLINIC_ID);
     } else {
       socket.disconnect();
       console.log("🔴 Socket Disconnected");
     }
   },
 
-  // 3. REAL API CALL
+  // 3. CALL NEXT PATIENT
   callNextPatient: async () => {
     try {
       const { queue } = get();
       if (queue.length === 0) return;
 
-      // Optimistic Update (Update UI instantly)
+      // Optimistic Update
       const next = queue[0];
       const remaining = queue.slice(1);
       set({ currentPatient: next, queue: remaining });
 
-      // Send to Backend
-      await api.post("/queue/clinic_1/next");
+      await api.post(`/queue/${CLINIC_ID}/next`);
     } catch (error) {
       console.error("Call Next Failed:", error);
-      // Revert if failed (Optional logic here)
     }
   },
 

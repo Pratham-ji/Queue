@@ -5,276 +5,317 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  StatusBar,
   Image,
-  ListRenderItem,
+  StatusBar,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as Animatable from "react-native-animatable";
 
-// --- THEME ---
+// 🎨 THEME
 const COLORS = {
-  primary: "#047857",
-  text: "#111827",
-  subText: "#6B7280",
-  bg: "#F9FAFB",
-  surface: "#FFFFFF",
-  border: "#E5E7EB",
-  unreadBg: "#ECFDF5",
+  primary: "#10B981",
+  bg: "#F8FAFC",
+  white: "#FFFFFF",
+  text: "#1E293B",
+  subText: "#64748B",
+  border: "#E2E8F0",
+  read: "#F1F5F9",
+  unread: "#ECFDF5",
 };
 
-// --- MOCK DATA (Anime Medical Team) ---
-const MESSAGES = [
+// 📨 MOCK DATA: CHATS
+const CHATS = [
   {
     id: "1",
-    name: "Dr. Franken Stein",
+    doctor: "Dr. Trafalgar Law",
     avatar:
-      "https://i.pinimg.com/736x/5b/c3/0f/5bc30f924df0d7c7689224422204595e.jpg",
-    lastMessage: "The dissection— I mean, the surgery went perfectly.",
+      "https://img.freepik.com/free-photo/doctor-offering-medical-teleconsultation_23-2149329007.jpg",
+    lastMsg: "Please bring your previous MRI reports.",
     time: "10:30 AM",
-    unread: true,
+    unread: 2,
   },
   {
     id: "2",
-    name: "Squad 4 Reception",
-    avatar:
-      "https://i.pinimg.com/736x/11/4a/ec/114aec4a64867c2e9c1d683783472097.jpg", // Unohana
-    lastMessage: "Captain Unohana will see you now.",
+    doctor: "Dr. Chopper",
+    avatar: "https://i.pravatar.cc/150?u=chopper",
+    lastMsg: "The medicine is ready for pickup.",
     time: "Yesterday",
-    unread: false,
+    unread: 0,
   },
 ];
 
+// 🔔 MOCK DATA: NOTIFICATIONS
 const NOTIFICATIONS = [
   {
     id: "1",
-    title: "Queue Update",
-    body: "You are now #5 in the queue for Dr. Chopper.",
+    title: "Booking Confirmed",
+    body: "Your appointment with Dr. Law is confirmed for Oct 12.",
     time: "2 mins ago",
-    icon: "time",
-    color: "#F59E0B", // Amber
+    icon: "calendar",
+    color: "#3B82F6", // Blue
   },
   {
     id: "2",
-    title: "Booking Confirmed",
-    body: "Your slot with Dr. Law is booked for 10:45 AM.",
+    title: "Queue Alert",
+    body: "You are now #3 in line. Please head to the clinic.",
     time: "1 hour ago",
-    icon: "checkmark-circle",
+    icon: "ticket",
     color: "#10B981", // Green
+  },
+  {
+    id: "3",
+    title: "Payment Successful",
+    body: "Transaction ID #88329 for $50.00 was successful.",
+    time: "Yesterday",
+    icon: "card",
+    color: "#8B5CF6", // Purple
   },
 ];
 
 export default function MessagesScreen() {
-  const [activeTab, setActiveTab] = useState<"Messages" | "Notifications">(
-    "Messages",
-  );
-
-  // --- RENDERERS ---
-
-  const renderMessageItem: ListRenderItem<any> = ({ item }) => (
-    <TouchableOpacity
-      style={[styles.itemCard, item.unread && styles.unreadCard]}
-      activeOpacity={0.7}
-    >
-      <Image source={{ uri: item.avatar }} style={styles.avatar} />
-      <View style={styles.content}>
-        <View style={styles.topRow}>
-          <Text style={[styles.name, item.unread && styles.unreadText]}>
-            {item.name}
-          </Text>
-          <Text style={styles.time}>{item.time}</Text>
-        </View>
-        <Text
-          style={[styles.messageText, item.unread && styles.unreadMessage]}
-          numberOfLines={2}
-        >
-          {item.lastMessage}
-        </Text>
-      </View>
-      {item.unread && <View style={styles.unreadDot} />}
-    </TouchableOpacity>
-  );
-
-  const renderNotificationItem: ListRenderItem<any> = ({ item }) => (
-    <TouchableOpacity style={styles.itemCard} activeOpacity={0.7}>
-      <View style={[styles.iconBox, { backgroundColor: item.color + "20" }]}>
-        {/* '20' adds transparency to the hex color */}
-        <Ionicons name={item.icon} size={20} color={item.color} />
-      </View>
-      <View style={styles.content}>
-        <View style={styles.topRow}>
-          <Text style={styles.notifTitle}>{item.title}</Text>
-          <Text style={styles.time}>{item.time}</Text>
-        </View>
-        <Text style={styles.messageText} numberOfLines={2}>
-          {item.body}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
-
-  // --- EMPTY STATE ---
-  const renderEmptyState = () => (
-    <View style={styles.emptyContainer}>
-      <View style={styles.emptyIconCircle}>
-        <Ionicons
-          name={
-            activeTab === "Messages"
-              ? "chatbubbles-outline"
-              : "notifications-off-outline"
-          }
-          size={48}
-          color="#9CA3AF"
-        />
-      </View>
-      <Text style={styles.emptyTitle}>
-        {activeTab === "Messages" ? "No messages yet" : "All caught up"}
-      </Text>
-      <Text style={styles.emptySub}>
-        {activeTab === "Messages"
-          ? "When you contact a doctor or support, your chats will appear here."
-          : "You have no new notifications at the moment."}
-      </Text>
-    </View>
-  );
+  const [activeTab, setActiveTab] = useState<"chats" | "alerts">("chats");
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
 
       {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Inbox</Text>
+        <TouchableOpacity style={styles.iconBtn}>
+          <Ionicons name="create-outline" size={24} color={COLORS.primary} />
+        </TouchableOpacity>
       </View>
 
-      {/* TABS */}
+      {/* SEGMENTED CONTROL (TABS) */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === "Messages" && styles.activeTab]}
-          onPress={() => setActiveTab("Messages")}
+          style={[styles.tabBtn, activeTab === "chats" && styles.activeTab]}
+          onPress={() => setActiveTab("chats")}
         >
           <Text
             style={[
               styles.tabText,
-              activeTab === "Messages" && styles.activeTabText,
+              activeTab === "chats" && styles.activeTabText,
             ]}
           >
             Messages
           </Text>
         </TouchableOpacity>
-
         <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === "Notifications" && styles.activeTab,
-          ]}
-          onPress={() => setActiveTab("Notifications")}
+          style={[styles.tabBtn, activeTab === "alerts" && styles.activeTab]}
+          onPress={() => setActiveTab("alerts")}
         >
           <Text
             style={[
               styles.tabText,
-              activeTab === "Notifications" && styles.activeTabText,
+              activeTab === "alerts" && styles.activeTabText,
             ]}
           >
             Notifications
           </Text>
+          {/* Badge */}
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>3</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
-      {/* LIST CONTENT */}
-      {/* Fix: Explicitly type FlatList as <any> to accept both data shapes */}
-      <FlatList<any>
-        data={activeTab === "Messages" ? MESSAGES : NOTIFICATIONS}
-        keyExtractor={(item) => item.id}
-        renderItem={
-          activeTab === "Messages" ? renderMessageItem : renderNotificationItem
-        }
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={renderEmptyState}
-        showsVerticalScrollIndicator={false}
-      />
+      {/* SEARCH BAR */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color={COLORS.subText} />
+        <TextInput
+          placeholder={
+            activeTab === "chats"
+              ? "Search conversations..."
+              : "Search alerts..."
+          }
+          placeholderTextColor={COLORS.subText}
+          style={styles.searchInput}
+        />
+      </View>
+
+      {/* CONTENT LIST */}
+      {activeTab === "chats" ? (
+        <FlatList
+          data={CHATS}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item, index }) => (
+            <Animatable.View animation="fadeInUp" delay={index * 100}>
+              <TouchableOpacity
+                style={[
+                  styles.chatCard,
+                  item.unread > 0 ? styles.unreadCard : styles.readCard,
+                ]}
+              >
+                <Image source={{ uri: item.avatar }} style={styles.avatar} />
+                <View style={styles.chatInfo}>
+                  <View style={styles.chatTop}>
+                    <Text style={styles.chatName}>{item.doctor}</Text>
+                    <Text style={styles.chatTime}>{item.time}</Text>
+                  </View>
+                  <View style={styles.chatBottom}>
+                    <Text style={styles.chatMsg} numberOfLines={1}>
+                      {item.lastMsg}
+                    </Text>
+                    {item.unread > 0 && (
+                      <View style={styles.unreadBadge}>
+                        <Text style={styles.unreadText}>{item.unread}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </Animatable.View>
+          )}
+        />
+      ) : (
+        <FlatList
+          data={NOTIFICATIONS}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item, index }) => (
+            <Animatable.View animation="fadeInUp" delay={index * 100}>
+              <View style={styles.notifCard}>
+                <View
+                  style={[
+                    styles.iconBox,
+                    { backgroundColor: `${item.color}20` },
+                  ]}
+                >
+                  <Ionicons
+                    name={item.icon as any}
+                    size={24}
+                    color={item.color}
+                  />
+                </View>
+                <View style={styles.notifInfo}>
+                  <Text style={styles.notifTitle}>{item.title}</Text>
+                  <Text style={styles.notifBody}>{item.body}</Text>
+                  <Text style={styles.notifTime}>{item.time}</Text>
+                </View>
+              </View>
+            </Animatable.View>
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.bg,
-  },
+  container: { flex: 1, backgroundColor: COLORS.white },
+
   header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: COLORS.bg,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: COLORS.text,
-  },
+  headerTitle: { fontSize: 28, fontWeight: "800", color: COLORS.text },
+  iconBtn: { padding: 8, backgroundColor: COLORS.bg, borderRadius: 12 },
 
-  // Tabs
+  // TABS
   tabContainer: {
     flexDirection: "row",
-    paddingHorizontal: 20,
+    marginHorizontal: 20,
+    backgroundColor: COLORS.bg,
+    borderRadius: 12,
+    padding: 4,
     marginBottom: 16,
   },
-  tab: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: "transparent",
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: "transparent",
+  tabBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
   },
   activeTab: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#E5E7EB",
+    backgroundColor: COLORS.white,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
-  tabText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.subText,
+  tabText: { fontWeight: "600", color: COLORS.subText },
+  activeTabText: { color: COLORS.text, fontWeight: "700" },
+  badge: {
+    backgroundColor: "#EF4444",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
   },
-  activeTabText: {
-    color: COLORS.text,
-  },
+  badgeText: { color: "#FFF", fontSize: 10, fontWeight: "700" },
 
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
-  },
-
-  // Cards
-  itemCard: {
+  // SEARCH
+  searchContainer: {
     flexDirection: "row",
-    backgroundColor: COLORS.surface,
+    alignItems: "center",
+    marginHorizontal: 20,
+    marginBottom: 20,
+    backgroundColor: COLORS.bg,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 16,
+  },
+  searchInput: { marginLeft: 10, flex: 1, fontSize: 16, color: COLORS.text },
+
+  listContent: { paddingHorizontal: 20, paddingBottom: 100 },
+
+  // CHAT CARD
+  chatCard: {
+    flexDirection: "row",
     padding: 16,
     borderRadius: 16,
     marginBottom: 12,
+  },
+  unreadCard: { backgroundColor: COLORS.unread },
+  readCard: {
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  avatar: { width: 56, height: 56, borderRadius: 28, marginRight: 16 },
+  chatInfo: { flex: 1, justifyContent: "center" },
+  chatTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  chatName: { fontSize: 16, fontWeight: "700", color: COLORS.text },
+  chatTime: { fontSize: 12, color: COLORS.subText },
+  chatBottom: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 2,
   },
-  unreadCard: {
-    backgroundColor: "#F0FDF4",
-    borderLeftWidth: 3,
-    borderLeftColor: COLORS.primary,
+  chatMsg: { fontSize: 14, color: COLORS.subText, flex: 1, marginRight: 10 },
+  unreadBadge: {
+    backgroundColor: COLORS.primary,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#E5E7EB",
+  unreadText: { color: "#FFF", fontSize: 10, fontWeight: "700" },
+
+  // NOTIF CARD
+  notifCard: {
+    flexDirection: "row",
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   iconBox: {
     width: 48,
@@ -282,76 +323,20 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 16,
   },
-  content: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  name: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: COLORS.text,
-  },
+  notifInfo: { flex: 1 },
   notifTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
     color: COLORS.text,
+    marginBottom: 2,
   },
-  unreadText: {
-    color: "#065F46",
-  },
-  time: {
-    fontSize: 11,
-    color: COLORS.subText,
-  },
-  messageText: {
-    fontSize: 13,
-    color: COLORS.subText,
-    lineHeight: 18,
-  },
-  unreadMessage: {
-    color: COLORS.text,
-    fontWeight: "500",
-  },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.primary,
-    marginLeft: 8,
-  },
-
-  // Empty State
-  emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 80,
-    paddingHorizontal: 40,
-  },
-  emptyIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.text,
-    marginBottom: 8,
-  },
-  emptySub: {
+  notifBody: {
     fontSize: 14,
     color: COLORS.subText,
-    textAlign: "center",
+    marginBottom: 6,
     lineHeight: 20,
   },
+  notifTime: { fontSize: 12, color: "#94A3B8", fontWeight: "500" },
 });

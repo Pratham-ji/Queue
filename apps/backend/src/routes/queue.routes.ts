@@ -1,3 +1,5 @@
+// apps/backend/src/routes/queue.routes.ts
+
 import { Router } from "express";
 import {
   getQueue,
@@ -13,14 +15,14 @@ import { requireRole } from "../middleware/role.middleware";
 
 const router = Router();
 
-// ✅ MATCH: GET /api/queue/clinic_1
+// 1. GET Queue (Specific Clinic)
 router.get("/:clinicId", getQueue);
 // ✅ MATCH: POST /api/queue/clinic_1/next
 // We add '/:clinicId/next' so it matches what the mobile app sends
 router.post("/:clinicId/next", callNextPatient);
 
-// Keep this for future use (User App will use this)
-router.post("/add", addPatient);
+// 3. Add Patient (Specific Clinic) <--- UPDATE THIS LINE
+router.post("/:clinicId/add", addPatient);
 
 // Only logged-in users
 router.post("/join", requireAuth, joinQueue);

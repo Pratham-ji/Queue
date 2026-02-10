@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -8,27 +8,30 @@ import {
   Image,
   StatusBar,
   Alert,
-  Platform,
+  RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useFocusEffect } from "@react-navigation/native";
+import { useUserQueueStore } from "../../store/userQueueStore";
+import { api } from "../../services/api";
 
 // --- THEME ---
 const COLORS = {
-  primary: "#047857", // Emerald Green (Trust)
-  dark: "#064E3B", // Darker Green for contrast
+  primary: "#047857", // Emerald Green
+  dark: "#064E3B",
   text: "#111827",
   subText: "#6B7280",
-  bg: "#F3F4F6", // Light Grey Background
+  bg: "#F3F4F6",
   surface: "#FFFFFF",
   border: "#E5E7EB",
   danger: "#EF4444",
-  highlight: "#D1FAE5", // Very light green
+  highlight: "#D1FAE5",
 };
 
 // --- REUSABLE COMPONENTS ---
-
-// 1. Settings Row
 const SettingItem = ({ icon, label, onPress, isDestructive = false }: any) => (
   <TouchableOpacity
     style={styles.settingRow}
@@ -51,12 +54,44 @@ const SettingItem = ({ icon, label, onPress, isDestructive = false }: any) => (
   </TouchableOpacity>
 );
 
-// 2. Section Header
 const SectionHeader = ({ title }: { title: string }) => (
   <Text style={styles.sectionTitle}>{title}</Text>
 );
 
 export default function ProfileScreen() {
+  // 1. STORE DATA (Live Queue)
+  const { activeToken, peopleAhead, queueStatus, estimatedWait } =
+    useUserQueueStore();
+
+  // 2. LOCAL STATE (Appointments)
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // 3. FETCH APPOINTMENTS
+  const fetchAppointments = async () => {
+    setLoading(true);
+    try {
+      // Hardcoded user for demo consistency
+      const res = await api.get(
+        "/booking/my-appointments?patientName=Pratham Raj",
+      );
+      if (res.data.success) {
+        setAppointments(res.data.data);
+      }
+    } catch (error) {
+      console.log("Error fetching history");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Refresh when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      fetchAppointments();
+    }, []),
+  );
+
   const handleLogout = () => {
     Alert.alert("Log Out", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
@@ -84,20 +119,23 @@ export default function ProfileScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={fetchAppointments} />
+        }
       >
-        {/* === CONTAINER 1: THE IDENTITY & SNAPSHOT CARD === */}
+        {/* === CONTAINER 1: IDENTITY === */}
         <View style={styles.heroCard}>
-          {/* Top Row: Identity */}
+          {/* Identity */}
           <View style={styles.identityRow}>
             <Image
-              source={{ uri: "https://randomuser.me/api/portraits/men/32.jpg" }}
+              source={{ uri: "https://i.pravatar.cc/150?u=pratham" }}
               style={styles.avatar}
             />
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>Rahul Sharma</Text>
+              <Text style={styles.userName}>Pratham Raj</Text>
               <Text style={styles.userHandle}>+91 98765 43210</Text>
               <View style={styles.membershipBadge}>
-                <Text style={styles.memberText}>Basic Member</Text>
+                <Text style={styles.memberText}>Premium Member</Text>
               </View>
             </View>
             <TouchableOpacity style={styles.editIconBtn}>
@@ -111,26 +149,58 @@ export default function ProfileScreen() {
 
           <View style={styles.divider} />
 
-          {/* Bottom Row: Health Snapshot (The Mixture) */}
+          {/* Stats */}
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={styles.statNum}>2</Text>
+              <Text style={styles.statNum}>
+                {appointments.filter((a) => a.status === "CONFIRMED").length}
+              </Text>
               <Text style={styles.statLabel}>Upcoming</Text>
             </View>
             <View style={styles.verticalLine} />
             <View style={styles.statItem}>
-              <Text style={styles.statNum}>14</Text>
-              <Text style={styles.statLabel}>Completed</Text>
+              <Text style={styles.statNum}>{appointments.length}</Text>
+              <Text style={styles.statLabel}>Total</Text>
             </View>
             <View style={styles.verticalLine} />
             <View style={styles.statItem}>
-              <Text style={styles.statNum}>3</Text>
+              <Text style={styles.statNum}>0</Text>
               <Text style={styles.statLabel}>Records</Text>
             </View>
           </View>
         </View>
 
-        {/* === CONTAINER 2: PAST APPOINTMENTS (History) === */}
+        {/* === 🟢 NEW: ACTIVE QUEUE CARD (Only shows if Joined) === */}
+        {queueStatus === "JOINED" && (
+          <LinearGradient
+            colors={["#047857", "#065F46"]}
+            style={styles.activeQueueCard}
+          >
+            <View style={styles.queueHeader}>
+              <View style={styles.queueLabelContainer}>
+                <Ionicons name="ticket" size={16} color="#FFF" />
+                <Text style={styles.queueTitle}>Active Ticket</Text>
+              </View>
+              <View style={styles.liveTag}>
+                <Text style={styles.liveText}>LIVE</Text>
+              </View>
+            </View>
+
+            <View style={styles.queueBody}>
+              <Text style={styles.tokenBig}>#{activeToken}</Text>
+              <View style={styles.queueStats}>
+                <Text style={styles.queueSubText}>
+                  {peopleAhead} People Ahead
+                </Text>
+                <Text style={styles.queueSubText}>
+                  ~{estimatedWait} min wait
+                </Text>
+              </View>
+            </View>
+          </LinearGradient>
+        )}
+
+        {/* === CONTAINER 2: APPOINTMENT HISTORY === */}
         <View style={styles.sectionWrapper}>
           <View style={styles.sectionTop}>
             <Text style={styles.sectionHeaderTitle}>Recent History</Text>
@@ -139,26 +209,37 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* History Card */}
-          <View style={styles.historyCard}>
-            <View style={styles.historyLeft}>
-              <View style={styles.docAvatarPlaceholder}>
-                <Text style={styles.docInitials}>LP</Text>
-              </View>
-              <View>
-                <Text style={styles.historyDoc}>Dr. Leorio Paradinight</Text>
-                <Text style={styles.historyDate}>
-                  Hunter Association • Yesterday
-                </Text>
-              </View>
+          {/* Dynamic List */}
+          {appointments.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No appointments yet.</Text>
             </View>
-            <TouchableOpacity style={styles.rebookBtn}>
-              <Text style={styles.rebookText}>Re-book</Text>
-            </TouchableOpacity>
-          </View>
+          ) : (
+            appointments.slice(0, 3).map((apt, index) => (
+              <View
+                key={index}
+                style={[styles.historyCard, { marginBottom: 10 }]}
+              >
+                <View style={styles.historyLeft}>
+                  <View style={styles.docAvatarPlaceholder}>
+                    <Text style={styles.docInitials}>TL</Text>
+                  </View>
+                  <View>
+                    <Text style={styles.historyDoc}>Dr. Trafalgar Law</Text>
+                    <Text style={styles.historyDate}>
+                      {apt.date} • {apt.time}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.statusBadge}>
+                  <Text style={styles.statusText}>{apt.status}</Text>
+                </View>
+              </View>
+            ))
+          )}
         </View>
 
-        {/* === CONTAINER 3: SERVICE PROVIDER CTA === */}
+        {/* === CONTAINER 3: PROVIDER CTA === */}
         <TouchableOpacity style={styles.providerBanner} activeOpacity={0.9}>
           <View>
             <Text style={styles.providerTitle}>Are you a Doctor?</Text>
@@ -171,7 +252,7 @@ export default function ProfileScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* === SETTINGS & UTILITY === */}
+        {/* === SETTINGS === */}
         <SectionHeader title="Account & Security" />
         <View style={styles.settingsGroup}>
           <SettingItem
@@ -191,12 +272,6 @@ export default function ProfileScreen() {
             label="Login & Security"
             onPress={() => {}}
           />
-          <View style={styles.settingDivider} />
-          <SettingItem
-            icon="document-text-outline"
-            label="Medical Records"
-            onPress={() => {}}
-          />
         </View>
 
         <SectionHeader title="Support & Legal" />
@@ -204,12 +279,6 @@ export default function ProfileScreen() {
           <SettingItem
             icon="help-circle-outline"
             label="Help Center"
-            onPress={() => {}}
-          />
-          <View style={styles.settingDivider} />
-          <SettingItem
-            icon="gift-outline"
-            label="Refer & Earn"
             onPress={() => {}}
           />
           <View style={styles.settingDivider} />
@@ -235,10 +304,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.bg,
-  },
+  container: { flex: 1, backgroundColor: COLORS.bg },
   header: {
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -252,10 +318,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     letterSpacing: -0.5,
   },
-  bellBtn: {
-    position: "relative",
-    padding: 4,
-  },
+  bellBtn: { position: "relative", padding: 4 },
   redDot: {
     position: "absolute",
     top: 4,
@@ -267,49 +330,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.bg,
   },
-  scrollContent: {
-    paddingBottom: 120,
-  },
+  scrollContent: { paddingBottom: 120 },
 
-  // === HERO CARD (The Mixture) ===
+  // HERO CARD
   heroCard: {
     backgroundColor: COLORS.surface,
     marginHorizontal: 20,
     borderRadius: 20,
     padding: 20,
     marginBottom: 24,
-    // Premium Shadow
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.08,
     shadowRadius: 16,
     elevation: 4,
   },
-  identityRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-  },
+  identityRow: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
   avatar: {
     width: 60,
     height: 60,
     borderRadius: 30,
     backgroundColor: "#E5E7EB",
   },
-  userInfo: {
-    marginLeft: 16,
-    flex: 1,
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.text,
-  },
-  userHandle: {
-    fontSize: 13,
-    color: COLORS.subText,
-    marginBottom: 4,
-  },
+  userInfo: { marginLeft: 16, flex: 1 },
+  userName: { fontSize: 18, fontWeight: "700", color: COLORS.text },
+  userHandle: { fontSize: 13, color: COLORS.subText, marginBottom: 4 },
   membershipBadge: {
     backgroundColor: COLORS.highlight,
     alignSelf: "flex-start",
@@ -323,62 +368,63 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     textTransform: "uppercase",
   },
-  editIconBtn: {
-    padding: 8,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 20,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#F3F4F6",
-    marginBottom: 16,
-  },
+  editIconBtn: { padding: 8, backgroundColor: "#F3F4F6", borderRadius: 20 },
+  divider: { height: 1, backgroundColor: "#F3F4F6", marginBottom: 16 },
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  statItem: {
-    alignItems: "center",
-    flex: 1,
-  },
-  statNum: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.text,
-  },
-  statLabel: {
-    fontSize: 11,
-    color: COLORS.subText,
-    marginTop: 2,
-  },
-  verticalLine: {
-    width: 1,
-    height: 24,
-    backgroundColor: "#E5E7EB",
-  },
+  statItem: { alignItems: "center", flex: 1 },
+  statNum: { fontSize: 18, fontWeight: "700", color: COLORS.text },
+  statLabel: { fontSize: 11, color: COLORS.subText, marginTop: 2 },
+  verticalLine: { width: 1, height: 24, backgroundColor: "#E5E7EB" },
 
-  // === RECENT HISTORY ===
-  sectionWrapper: {
+  // ACTIVE QUEUE CARD
+  activeQueueCard: {
     marginHorizontal: 20,
     marginBottom: 24,
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
   },
+  queueHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  queueLabelContainer: { flexDirection: "row", gap: 6, alignItems: "center" },
+  queueTitle: { color: "#FFF", fontWeight: "700", fontSize: 14 },
+  liveTag: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  liveText: { color: "#FFF", fontSize: 10, fontWeight: "800" },
+  queueBody: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
+  },
+  tokenBig: { fontSize: 42, fontWeight: "800", color: "#FFF" },
+  queueStats: { alignItems: "flex-end" },
+  queueSubText: { color: "#D1FAE5", fontSize: 13, fontWeight: "600" },
+
+  // HISTORY
+  sectionWrapper: { marginHorizontal: 20, marginBottom: 24 },
   sectionTop: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
   },
-  sectionHeaderTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: COLORS.text,
-  },
-  linkText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: COLORS.primary,
-  },
+  sectionHeaderTitle: { fontSize: 16, fontWeight: "700", color: COLORS.text },
+  linkText: { fontSize: 13, fontWeight: "600", color: COLORS.primary },
   historyCard: {
     backgroundColor: COLORS.surface,
     padding: 16,
@@ -389,57 +435,39 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
-  historyLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  historyLeft: { flexDirection: "row", alignItems: "center" },
   docAvatarPlaceholder: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#DBEAFE", // Light blue
+    backgroundColor: "#DBEAFE",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
   },
-  docInitials: {
-    color: "#1D4ED8",
-    fontWeight: "700",
-    fontSize: 14,
+  docInitials: { color: "#1D4ED8", fontWeight: "700", fontSize: 14 },
+  historyDoc: { fontSize: 14, fontWeight: "600", color: COLORS.text },
+  historyDate: { fontSize: 12, color: COLORS.subText, marginTop: 2 },
+  statusBadge: {
+    backgroundColor: "#ECFDF5",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  historyDoc: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.text,
-  },
-  historyDate: {
-    fontSize: 12,
-    color: COLORS.subText,
-    marginTop: 2,
-  },
-  rebookBtn: {
-    backgroundColor: COLORS.highlight,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  rebookText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: COLORS.primary,
-  },
+  statusText: { fontSize: 10, fontWeight: "700", color: COLORS.primary },
+  emptyState: { padding: 20, alignItems: "center" },
+  emptyText: { color: COLORS.subText, fontStyle: "italic" },
 
-  // === PROVIDER CTA ===
+  // PROVIDER CTA
   providerBanner: {
     marginHorizontal: 20,
-    backgroundColor: "#111827", // Black
+    backgroundColor: "#111827",
     borderRadius: 16,
     padding: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 32,
-    // Shadow
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -452,11 +480,7 @@ const styles = StyleSheet.create({
     color: "#FFF",
     marginBottom: 4,
   },
-  providerSub: {
-    fontSize: 12,
-    color: "#9CA3AF",
-    lineHeight: 18,
-  },
+  providerSub: { fontSize: 12, color: "#9CA3AF", lineHeight: 18 },
   providerIconCircle: {
     width: 40,
     height: 40,
@@ -466,7 +490,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  // === SETTINGS ===
+  // SETTINGS
   sectionTitle: {
     fontSize: 12,
     fontWeight: "700",
@@ -489,10 +513,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: 16,
   },
-  iconBox: {
-    width: 32,
-    alignItems: "center",
-  },
+  iconBox: { width: 32, alignItems: "center" },
   settingLabel: {
     flex: 1,
     fontSize: 15,
@@ -501,19 +522,19 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   destructiveBox: {
-    // optional styling
+      backgroundColor: "#FEF2F2", // Light Red Background
+    },
+    destructiveText: { 
+      color: COLORS.danger, 
+      fontWeight: "600" 
+    },
+    settingDivider: { 
+      height: 1, 
+      backgroundColor: "#F3F4F6", 
+      marginLeft: 56 
   },
-  destructiveText: {
-    color: COLORS.danger,
-    fontWeight: "600",
-  },
-  settingDivider: {
-    height: 1,
-    backgroundColor: "#F3F4F6",
-    marginLeft: 56, // indent
-  },
-
-  // === LOGOUT ===
+    
+  // LOGOUT
   logoutRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -524,11 +545,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 24,
   },
-  logoutText: {
-    color: COLORS.danger,
-    fontWeight: "700",
-    marginLeft: 8,
-  },
+  logoutText: { color: COLORS.danger, fontWeight: "700", marginLeft: 8 },
   versionInfo: {
     textAlign: "center",
     fontSize: 11,

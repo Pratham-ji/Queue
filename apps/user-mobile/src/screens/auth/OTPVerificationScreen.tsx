@@ -281,7 +281,7 @@ export default function OTPVerificationScreen({ route }: any) {
               style={styles.changePhoneBtn}
               onPress={handleGoBack}
             >
-              <Text style={styles.changePhoneText}>Use a different number</Text>
+              <Text style={styles.changePhoneText}>Use a different number/email</Text>
             </TouchableOpacity>
 
             {/* Bottom spacer for scrolling */}

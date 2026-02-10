@@ -406,6 +406,7 @@ interface SignUpFormProps {
   setShowPasswordConfirm: (value: boolean) => void;
   handleSignUp: () => void;
   handleVerifyPhone: () => void;
+  handleVerifyEmail: () => void;
   errors: Record<string, string>;
 }
 
@@ -418,6 +419,7 @@ const SignUpForm = ({
   setShowPasswordConfirm,
   handleSignUp,
   handleVerifyPhone,
+  handleVerifyEmail,
   errors,
 }: SignUpFormProps) => {
   const passwordStrength = validatePassword(formData.password);
@@ -484,6 +486,23 @@ const SignUpForm = ({
           <Text style={styles.fieldErrorText}>{errors.email}</Text>
         )}
       </View>
+
+      {/* Verify Email Button - Shows when email is valid */}
+      {formData.email.length > 0 && !errors.email && (
+        <TouchableOpacity
+          style={styles.verifyEmailBtn}
+          onPress={handleVerifyEmail}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name="mail-open-outline"
+            size={18}
+            color="#FFF"
+            style={{ marginRight: 8 }}
+          />
+          <Text style={styles.verifyEmailBtnText}>Verify Email</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Phone Number Input */}
       <View style={styles.signupInputWrapper}>
@@ -695,6 +714,17 @@ export default function LoginScreen() {
     }
   };
 
+  const handleVerifyEmail = () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (formData.email && emailRegex.test(formData.email)) {
+      navigation.navigate("OTPVerification", {
+        email: formData.email,
+        source: "email-verification",
+        signUpData: formData,
+      });
+    }
+  };
+
   const validateSignUpForm = () => {
     const newErrors: Record<string, string> = {};
     const passwordStrength = validatePassword(formData.password);
@@ -790,6 +820,7 @@ export default function LoginScreen() {
                 setShowPasswordConfirm={setShowPasswordConfirm}
                 handleSignUp={handleSignUp}
                 handleVerifyPhone={handleVerifyPhone}
+                handleVerifyEmail={handleVerifyEmail}
                 errors={errors}
               />
             )}
@@ -1335,6 +1366,29 @@ const styles = StyleSheet.create({
   verifyPhoneBtnText: {
     color: "#FFF",
     fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+
+  // Verify Email Button
+  verifyEmailBtn: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
+    flexDirection: "row",
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  verifyEmailBtnText: {
+    color: "#FFF",
+    fontSize: 14,
     fontWeight: "700",
     letterSpacing: 0.3,
   },

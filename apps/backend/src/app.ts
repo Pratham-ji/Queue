@@ -1,19 +1,20 @@
+import dotenv from "dotenv";
+// Load Config FIRST, before any other imports
+dotenv.config();
+
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import morgan from "morgan";
 import helmet from "helmet";
-import dotenv from "dotenv";
 
 // ✅ IMPORT OTP ROUTES (IMPORTANT)
 import otpRoutes from "./auth/otp.routes";
 
 // Existing Queue routes
 import queueRoutes from "./routes/queue.routes";
-
-// Load Config
-dotenv.config();
+import testRoutes from "./routes/test.routes"
 
 const app = express();
 const server = http.createServer(app);
@@ -37,6 +38,7 @@ app.use("/api/queue", queueRoutes);
 
 // 🔥 OTP AUTH ROUTES (THIS WAS MISSING)
 app.use("/api/auth", otpRoutes);
+app.use("/test", testRoutes);//testing
 
 // Health Check
 app.get("/", (req, res) => {

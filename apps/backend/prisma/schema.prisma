@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 1. THE DOCTOR / PROVIDER
+// 1. THE USER (Doctors, Patients, Staff)
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -18,62 +18,90 @@ model User {
   createdAt DateTime @default(now())
 
   // Relations
-  clinic    Clinic?
+  clinicId      String?
+  clinic        Clinic?        @relation("ClinicToUser", fields: [clinicId], references: [id])
+
+  doctorProfile DoctorProfile? // If user is a doctor
+  appointments  Appointment[]  // If user booked appointments
 }
 
-// 2. THE CLINIC (A doctor belongs to a clinic)
+// 2. THE CLINIC
 model Clinic {
-  id        String   @id @default(uuid())
-  name      String
-  address   String?
-  ownerId   String   @unique
-  owner     User     @relation(fields: [ownerId], references: [id])
+  id          String   @id @default(uuid())
+  name        String   // e.g. "Max Hospital"
+  address     String
+  city        String   @default("Dehradun")
+  image       String   // URL
+  rating      Float    @default(4.5)
+  description String?
+  createdAt   DateTime @default(now())
 
-  // The Queue
-  queue     Patient[]
+  // Relations
+  users         User[]          @relation("ClinicToUser") // Staff/Admins of this clinic
+  doctors       DoctorProfile[]
+  patients      Patient[]       // Queue patients
+}
 
-  // The Appointment
+// 3. THE PATIENT (Queue Items - Walk-ins)
+model Patient {
+  id            String      @id @default(uuid())
+  token         Int
+  name          String
+  phone         String?
+  type          VisitType   @default(CHECKUP)
+  status        QueueStatus @default(WAITING)
+
+  arrivalTime   DateTime    @default(now())
+  servedTime    DateTime?
+  completedTime DateTime?
+
+  clinicId      String
+  clinic        Clinic      @relation(fields: [clinicId], references: [id])
+}
+
+// 4. THE APPOINTMENT (Booked Online)
+model Appointment {
+  id          String   @id @default(uuid())
+  date        String
+  time        String
+  status      String   @default("CONFIRMED")
+  patientName String
+
+  doctorId    String?
+  doctor      DoctorProfile? @relation(fields: [doctorId], references: [id])
+
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+
+  createdAt   DateTime @default(now())
+}
+
+// 5. DOCTOR PROFILE (Details for the Doctor)
+model DoctorProfile {
+  id          String   @id @default(uuid())
+  name        String
+  specialty   String
+  experience  Int
+  image       String
+  rating      Float    @default(4.8)
+  price       Int
+  about       String?
+
+  clinicId    String
+  clinic      Clinic   @relation(fields: [clinicId], references: [id])
+
+  userId      String?  @unique
+  user        User?    @relation(fields: [userId], references: [id])
+
   appointments Appointment[]
 }
 
-// 3. THE PATIENT (The Queue Items)
-model Patient {
-  id          String      @id @default(uuid())
-  token       Int         // The "42" number
-  name        String
-  phone       String?
-  type        VisitType   @default(CHECKUP)
-  status      QueueStatus @default(WAITING)
-
-  arrivalTime DateTime    @default(now())
-  servedTime  DateTime?   // When did the doctor press "Call Next"?
-  completedTime DateTime? // When did the session end?
-
-  clinicId    String
-  clinic      Clinic      @relation(fields: [clinicId], references: [id])
-}
-
-// 4. The Appointment
-model Appointment {
-  id        String   @id @default(uuid())
-  clinicId  String
-  clinic    Clinic   @relation(fields: [clinicId], references: [id])
-
-  patientName  String
-  date         String   // Format: "2023-10-12"
-  time         String   // Format: "10:30 AM"
-  status       String   @default("CONFIRMED") // CONFIRMED, CANCELLED, COMPLETED
-
-  createdAt DateTime @default(now())
-}
-
-// 5. INSTANT QUEUE (The USP Feature)
-// Used for Salons, Banks, PBL, Events - anything needing a quick queue.
+// 6. INSTANT QUEUE (USP Feature)
 model CustomSession {
   id          String   @id @default(uuid())
-  hostName    String   // The person running the queue
-  title       String   // "PBL Review", "City Salon", "Table 5"
-  joinCode    String   @unique // Simple 6-digit code
+  hostName    String
+  title       String
+  joinCode    String   @unique
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
 
@@ -83,15 +111,15 @@ model CustomSession {
 model SessionParticipant {
   id        String   @id @default(uuid())
   name      String
-  token     Int      // 1, 2, 3...
-  status    String   @default("WAITING") // WAITING, SERVING, COMPLETED
+  token     Int
+  status    String   @default("WAITING")
   joinedAt  DateTime @default(now())
 
   sessionId String
   session   CustomSession @relation(fields: [sessionId], references: [id])
 }
 
-// --- ENUMS (Strict Typing) ---
+// --- ENUMS ---
 enum Role {
   PATIENT
   PROVIDER

@@ -7,6 +7,8 @@ import helmet from "helmet";
 import dotenv from "dotenv";
 import queueRoutes from "./routes/queue.routes";
 import authRoutes from "./routes/auth.routes";
+import hospitalRoutes from "./routes/hospital.routes";
+import providerRoutes from "./routes/provider.routes";
 import {
   createSession,
   joinSession,
@@ -43,6 +45,8 @@ app.use("/api/auth", authRoutes); // This enables /api/auth/login
 
 // --- 🚦 ROUTES ---
 app.use("/api/queue", queueRoutes);
+app.use("/api/hospital", hospitalRoutes);
+app.use("/api/provider", providerRoutes);
 
 app.post("/api/booking/create", createAppointment);
 app.get("/api/booking/my-appointments", getMyAppointments); // This will work now

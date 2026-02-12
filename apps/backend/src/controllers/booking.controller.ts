@@ -8,22 +8,20 @@ const prisma = new PrismaClient();
 // ==========================================
 export const createAppointment = async (req: Request, res: Response) => {
   try {
-    const { clinicId, patientName, date, time } = req.body;
+    // ⚠️ UPDATE: We now expect doctorId instead of clinicId
+    const { doctorId, patientName, date, time } = req.body;
 
-    if (!clinicId || !patientName || !date || !time) {
+    if (!doctorId || !patientName || !date || !time) {
       return res.status(400).json({
         success: false,
-        error: "Missing required fields (clinicId, name, date, time)",
+        error: "Missing required fields (doctorId, name, date, time)",
       });
     }
 
-    // 1. Check if slot is taken (Optional - skipping for simplicity now)
-    // In a real Unicorn app, you'd check prisma.appointment.findFirst here.
-
-    // 2. Create Booking
+    // 1. Create Booking linked to the Doctor
     const newAppointment = await prisma.appointment.create({
       data: {
-        clinicId,
+        doctorId, // Link to the specific doctor
         patientName,
         date,
         time,
@@ -31,7 +29,9 @@ export const createAppointment = async (req: Request, res: Response) => {
       },
     });
 
-    console.log(`✅ New Booking: ${patientName} on ${date} at ${time}`);
+    console.log(
+      `✅ New Booking: ${patientName} with Doctor ${doctorId} on ${date}`,
+    );
 
     res.status(201).json({
       success: true,
@@ -50,7 +50,7 @@ export const createAppointment = async (req: Request, res: Response) => {
 // ==========================================
 export const getMyAppointments = async (req: Request, res: Response) => {
   try {
-    const { patientName } = req.query; // We will pass ?patientName=Pratham Raj
+    const { patientName } = req.query;
 
     if (!patientName) {
       return res
@@ -65,8 +65,13 @@ export const getMyAppointments = async (req: Request, res: Response) => {
       orderBy: {
         createdAt: "desc",
       },
+      // ⚠️ UPDATE: Fetch Doctor AND their Clinic
       include: {
-        clinic: true, // Include clinic details if needed
+        doctor: {
+          include: {
+            clinic: true, // Get the hospital details via the doctor
+          },
+        },
       },
     });
 

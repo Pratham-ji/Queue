@@ -5,6 +5,11 @@ import cors from "cors";
 import morgan from "morgan";
 import helmet from "helmet";
 import dotenv from "dotenv";
+
+// ✅ IMPORT OTP ROUTES (IMPORTANT)
+import otpRoutes from "./auth/otp.routes";
+
+// Existing Queue routes
 import queueRoutes from "./routes/queue.routes";
 import authRoutes from "./routes/auth.routes";
 import hospitalRoutes from "./routes/hospital.routes";
@@ -41,6 +46,12 @@ app.use(express.json());
 app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
+
+// ✅ ROUTES
+app.use("/api/queue", queueRoutes);
+
+// 🔥 OTP AUTH ROUTES (THIS WAS MISSING)
+app.use("/api/auth", otpRoutes);
 app.use("/api/auth", authRoutes); // This enables /api/auth/login
 
 // --- 🚦 ROUTES ---
@@ -58,7 +69,10 @@ app.post("/api/custom/next", callNext);
 
 // Health Check
 app.get("/", (req, res) => {
-  res.status(200).json({ status: "active", service: "Queue Pro API" });
+  res.status(200).json({
+    status: "active",
+    service: "Queue Pro API",
+  });
 });
 
 // --- SOCKET LOGIC ---

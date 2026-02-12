@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon src/app.ts"
+    "start": "node index.js",
+    "dev": "nodemon src/app.ts",
+    "build": "tsc"
   },
   "keywords": [],
   "author": "",
@@ -27,7 +29,7 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
-    "@types/node": "^25.0.9",
+    "@types/node": "^25.0.10",
     "nodemon": "^3.1.11",
     "prisma": "5.10.0",
     "ts-node": "^10.9.2",

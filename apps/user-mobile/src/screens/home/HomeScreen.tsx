@@ -1,191 +1,384 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
-  FlatList,
-  StyleSheet,
   Text,
+  StyleSheet,
+  TextInput,
+  ScrollView,
+  Image,
+  TouchableOpacity,
   StatusBar,
-  Keyboard,
-  TouchableWithoutFeedback,
-  Platform,
+  FlatList,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useNavigation } from "@react-navigation/native";
+import { api } from "../../services/api"; // Your API service
 
-import CategoryPills from "../../components/CategoryPills";
-import BigHospitalCard from "../../components/BigHospitalCard";
-import SearchInput from "../../components/SearchInput";
-import FilterModal from "../../components/FilterModal";
-import { hospitalsNearby, Hospital } from "../../services/mockData";
+const COLORS = {
+  primary: "#047857", // Emerald Green
+  bg: "#F8FAFC",
+  text: "#1E293B",
+  subText: "#64748B",
+  white: "#FFFFFF",
+  border: "#E2E8F0",
+};
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterVisible, setFilterVisible] = useState(false);
+  const [clinics, setClinics] = useState<any[]>([]);
+  const [doctors, setDoctors] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const categoryFiltered =
-    activeCategory === "All"
-      ? hospitalsNearby
-      : hospitalsNearby.filter((h) => h.type === activeCategory);
+  // 1. FETCH REAL DATA
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [clinicRes, doctorRes] = await Promise.all([
+          api.get("/hospital/clinics"),
+          api.get("/hospital/doctors"),
+        ]);
 
-  const finalData = categoryFiltered.filter((item) => {
-    const query = searchQuery.toLowerCase();
+        if (clinicRes.data.success) setClinics(clinicRes.data.data);
+        if (doctorRes.data.success) setDoctors(doctorRes.data.data);
+      } catch (error) {
+        console.error("Failed to load home data", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // 1. IMPROVED CLINIC CARD RENDER
+  const renderClinic = ({ item }: { item: any }) => (
+    <TouchableOpacity
+      activeOpacity={0.9}
+      style={styles.clinicCard}
+      onPress={() => navigation.navigate("HospitalDetails", { id: item.id })}
+    >
+      {/* ⚠️ FIX: Image now fills 100% of height initially */}
+      <Image
+        source={{ uri: item.image }}
+        style={styles.clinicImage}
+        resizeMode="cover"
+      />
+      <LinearGradient
+        colors={["transparent", "rgba(0,0,0,0.8)"]}
+        style={styles.cardGradient}
+      />
+      <View style={styles.clinicOverlay}>
+        <Text style={styles.clinicName} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <Text style={styles.clinicAddr} numberOfLines={1}>
+          {item.address}
+        </Text>
+        <View style={styles.ratingTag}>
+          <Ionicons name="star" size={10} color="#FFF" />
+          <Text style={styles.ratingNum}>{item.rating}</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderDoctor = ({ item }: { item: any }) => (
+    <TouchableOpacity
+      activeOpacity={0.9}
+      style={styles.docCard}
+      onPress={() => navigation.navigate("Booking", { doctorId: item.id })}
+    >
+      <View style={styles.docImgWrap}>
+        <Image source={{ uri: item.image }} style={styles.docImage} />
+        <View style={styles.verifiedBadge}>
+          <Ionicons name="checkmark" size={10} color="#FFF" />
+        </View>
+      </View>
+      <Text style={styles.docName} numberOfLines={1}>
+        {item.name}
+      </Text>
+      <Text style={styles.docSpec}>{item.specialty}</Text>
+      <View style={styles.priceTag}>
+        <Text style={styles.priceText}>₹{item.price}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  if (loading) {
     return (
-      item.name.toLowerCase().includes(query) ||
-      item.location.toLowerCase().includes(query) ||
-      item.type.toLowerCase().includes(query)
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
     );
-  });
-
-  const clearSearch = () => {
-    setSearchQuery("");
-    Keyboard.dismiss();
-  };
-
-  const handleFilterApply = (filters: any) => {
-    setFilterVisible(false);
-  };
+  }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="#FFFFFF"
-        translucent={false}
-      />
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
 
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={{ flex: 1 }}>
-          <FlatList<Hospital>
-            data={finalData}
-            keyExtractor={(item) => item.id.toString()}
-            ListHeaderComponent={
-              <View style={styles.headerContainer}>
-                {/* 1. Search Bar */}
-                <SearchInput
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholder="Find doctors, clinics, hospitals..."
-                  onClear={clearSearch}
-                  onFilter={() => setFilterVisible(true)}
-                  containerStyle={styles.searchContainer}
-                />
+      {/* HEADER */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.greeting}>Hello, Patient 👋</Text>
+          <Text style={styles.title}>Find your doctor</Text>
+        </View>
+        <Image
+          source={{ uri: "https://i.pravatar.cc/150?u=user" }}
+          style={styles.userAvatar}
+        />
+      </View>
 
-                {/* 2. Category Pills */}
-                <View style={styles.pillsSection}>
-                  <CategoryPills
-                    categories={["All", "Hospital", "Clinic", "Diagnostics"]}
-                    activeCategory={activeCategory}
-                    onCategoryPress={setActiveCategory}
-                  />
-                </View>
+      {/* SEARCH BAR */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color={COLORS.subText} />
+        <TextInput
+          placeholder="Search for clinics, doctors..."
+          style={styles.searchInput}
+          placeholderTextColor={COLORS.subText}
+        />
+        <View style={styles.filterBtn}>
+          <Ionicons name="options" size={20} color="#FFF" />
+        </View>
+      </View>
 
-                {/* 3. Title Section (Clean, no banner) */}
-                <View style={styles.titleRow}>
-                  <Text style={styles.sectionTitle}>
-                    {searchQuery.length > 0
-                      ? `Results for "${searchQuery}"`
-                      : activeCategory === "All"
-                        ? "Nearby Healthcare"
-                        : `Nearby ${activeCategory}s`}
-                  </Text>
-                  <Text style={styles.resultCount}>
-                    {finalData.length} found
-                  </Text>
-                </View>
-              </View>
-            }
-            renderItem={({ item }) => (
-              <BigHospitalCard
-                name={item.name}
-                rating={item.rating}
-                time={item.time}
-                location={item.location}
-                type={item.type}
-                status={item.status}
-                image={item.image}
-                onPress={() =>
-                  navigation.navigate("HospitalDetails", { id: item.id })
-                }
-              />
-            )}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Ionicons name="search-outline" size={48} color="#E5E7EB" />
-                <Text style={styles.emptyText}>No results found</Text>
-                <Text style={styles.emptySub}>Try adjusting your search.</Text>
-              </View>
-            }
-          />
-
-          <FilterModal
-            visible={filterVisible}
-            onClose={() => setFilterVisible(false)}
-            onApply={handleFilterApply}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
+        {/* BANNER */}
+        <View style={styles.banner}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.bannerTitle}>Skip the Queue!</Text>
+            <Text style={styles.bannerSub}>Book online & save time.</Text>
+            <TouchableOpacity style={styles.bannerBtn}>
+              <Text style={styles.bannerBtnText}>Check Queue Status</Text>
+            </TouchableOpacity>
+          </View>
+          <Ionicons
+            name="time"
+            size={80}
+            color="rgba(255,255,255,0.2)"
+            style={{ position: "absolute", right: -10, bottom: -10 }}
           />
         </View>
-      </TouchableWithoutFeedback>
+
+        {/* HOSPITALS SECTION */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Nearby Hospitals</Text>
+          <TouchableOpacity>
+            <Text style={styles.seeAll}>See All</Text>
+          </TouchableOpacity>
+        </View>
+
+        <FlatList
+          horizontal
+          data={clinics}
+          renderItem={renderClinic}
+          keyExtractor={(item) => item.id}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20 }}
+        />
+
+        {/* TOP DOCTORS SECTION */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Top Doctors</Text>
+          <TouchableOpacity>
+            <Text style={styles.seeAll}>See All</Text>
+          </TouchableOpacity>
+        </View>
+
+        <FlatList
+          horizontal
+          data={doctors}
+          renderItem={renderDoctor}
+          keyExtractor={(item) => item.id}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20 }}
+        />
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
-  },
-  headerContainer: {
-    paddingTop: 10,
-    marginBottom: 10,
-  },
-  searchContainer: {
-    marginBottom: 16,
-    marginTop: 4,
-  },
-  pillsSection: {
-    marginBottom: 20,
-  },
-  titleRow: {
+  container: { flex: 1, backgroundColor: COLORS.bg },
+  header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "baseline",
-    marginBottom: 16,
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    marginBottom: 20,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#111",
-    letterSpacing: -0.5,
+  greeting: { fontSize: 14, color: COLORS.subText },
+  title: { fontSize: 22, fontWeight: "700", color: COLORS.text },
+  userAvatar: {
+    width: 45,
+    height: 45,
+    borderRadius: 25,
+    backgroundColor: "#E2E8F0",
   },
-  resultCount: {
-    fontSize: 12,
-    color: "#6B7280",
-    fontWeight: "500",
+
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.white,
+    marginHorizontal: 20,
+    paddingHorizontal: 16,
+    height: 50,
+    borderRadius: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+    marginBottom: 24,
   },
-  emptyContainer: {
+  searchInput: { flex: 1, marginLeft: 10, fontSize: 16, color: COLORS.text },
+  filterBtn: {
+    backgroundColor: COLORS.primary,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    paddingTop: 60,
   },
-  emptyText: {
+
+  banner: {
+    backgroundColor: COLORS.primary,
+    marginHorizontal: 20,
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 30,
+    flexDirection: "row",
+    overflow: "hidden",
+  },
+  bannerTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#FFF",
+    marginBottom: 4,
+  },
+  bannerSub: { fontSize: 14, color: "#D1FAE5", marginBottom: 16 },
+  bannerBtn: {
+    backgroundColor: "#FFF",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  bannerBtnText: { color: COLORS.primary, fontWeight: "700", fontSize: 12 },
+
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  sectionTitle: { fontSize: 18, fontWeight: "700", color: COLORS.text },
+  seeAll: { color: COLORS.primary, fontWeight: "600", fontSize: 14 },
+
+  // CLINIC CARD
+  clinicCard: {
+    width: 260,
+    height: 180, // Fixed height for consistency
+    backgroundColor: "#F1F5F9", // Fallback color
+    borderRadius: 20,
+    marginRight: 16,
+    overflow: "hidden", // Crucial for image clipping
+    position: "relative",
+    marginBottom: 10,
+  },
+  clinicImage: {
+    width: "100%",
+    height: "100%", // Fills the card
+  },
+  cardGradient: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+  },
+  clinicOverlay: {
+    position: "absolute",
+    bottom: 12,
+    left: 12,
+    right: 12,
+  },
+  clinicName: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#374151",
-    marginTop: 12,
+    fontWeight: "700",
+    color: "#FFF",
+    marginBottom: 2,
   },
-  emptySub: {
-    fontSize: 13,
-    color: "#9CA3AF",
-    marginTop: 4,
+  clinicAddr: { fontSize: 12, color: "rgba(255,255,255,0.8)", marginBottom: 6 },
+  ratingTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignSelf: "flex-start",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
+  ratingNum: { color: "#FFF", fontSize: 10, fontWeight: "700", marginLeft: 4 },
+  docCount: { fontSize: 12, color: COLORS.subText, marginLeft: 4 },
+
+  // DOCTOR CARD
+  docCard: {
+    width: 140,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 12,
+    alignItems: "center",
+    marginRight: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    marginBottom: 10,
+  },
+  docImgWrap: { position: "relative", marginBottom: 10 },
+  docImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "#F1F5F9",
+  },
+  verifiedBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    backgroundColor: "#3B82F6",
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#FFF",
+  },
+  docName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.text,
+    textAlign: "center",
+    marginBottom: 2,
+  },
+  docSpec: {
+    fontSize: 11,
+    color: COLORS.subText,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  priceTag: {
+    backgroundColor: "#ECFDF5",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  priceText: { fontSize: 10, fontWeight: "700", color: COLORS.primary },
 });

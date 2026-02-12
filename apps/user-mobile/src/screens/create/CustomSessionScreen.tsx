@@ -57,11 +57,16 @@ export default function CustomSessionScreen() {
     } catch (e) {}
   };
 
-  // 1. IMPROVED CALL NEXT FUNCTION
+  // 1. SMART LOGIC: Check if anyone is actually waiting
+  const waitingParticipants = queue.filter((p) => p.status === "WAITING");
+  const isQueueEmpty = waitingParticipants.length === 0;
+
   const handleCallNext = async () => {
-    // Prevent call if nobody is waiting
-    const waitingCount = queue.filter((p) => p.status === "WAITING").length;
-    if (waitingCount === 0) return;
+    // Safety Check: Stop execution if queue is empty
+    if (isQueueEmpty) {
+      Alert.alert("All Caught Up", "There is no one left in the waiting list!");
+      return;
+    }
 
     try {
       const res = await api.post("/custom/next", { sessionId: session.id });
@@ -69,7 +74,7 @@ export default function CustomSessionScreen() {
         Alert.alert("Info", res.data.error);
       }
     } catch (e) {
-      console.error("Call next failed");
+      console.error("Call next failed", e);
     }
   };
 
@@ -172,20 +177,17 @@ export default function CustomSessionScreen() {
         )}
       </View>
 
-      {/* FOOTER - HOST ONLY */}
+      {/* HOST FOOTER */}
       {role === "HOST" && (
         <View style={styles.footer}>
           <TouchableOpacity
-            // 3. DISABLE BUTTON LOGIC
-            style={[
-              styles.callBtn,
-              !hasWaitingParticipants && styles.disabledBtn,
-            ]}
+            // 2. VISUAL FEEDBACK: Turn button Grey if empty
+            style={[styles.callBtn, isQueueEmpty && styles.disabledBtn]}
             onPress={handleCallNext}
-            disabled={!hasWaitingParticipants}
+            activeOpacity={isQueueEmpty ? 1 : 0.7} // Disable click effect if empty
           >
             <Text style={styles.callText}>
-              {hasWaitingParticipants ? "Call Next Person" : "Queue Empty"}
+              {isQueueEmpty ? "Queue Empty" : "Call Next Person"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -313,10 +315,10 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     fontWeight: "500",
   },
-  // 4. ADD DISABLED STYLE
+  // ADD DISABLED STYLE
   disabledBtn: {
-    backgroundColor: "#94A3B8", // Grey out the button
-    shadowOpacity: 0,
+    backgroundColor: "#94A3B8", // Slate 400 (Grey)
     elevation: 0,
+    shadowOpacity: 0,
   },
 });

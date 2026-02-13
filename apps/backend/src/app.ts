@@ -5,10 +5,8 @@ import cors from "cors";
 import morgan from "morgan";
 import helmet from "helmet";
 import dotenv from "dotenv";
-
-// ✅ IMPORT OTP ROUTES (IMPORTANT)
 import otpRoutes from "./auth/otp.routes";
-
+import uploadRoutes from "./routes/upload.routes";
 
 // Existing Queue routes
 import queueRoutes from "./routes/queue.routes";
@@ -49,6 +47,7 @@ app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
 app.use("/api/admin", adminRoutes);
+app.use("/api/upload", uploadRoutes);
 
 // ✅ ROUTES
 app.use("/api/queue", queueRoutes);

@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyToken } from "../config/jwt";
+import { Role } from "../role/role.enum";
+import jwt from "jsonwebtoken";
 
 declare global {
   namespace Express {
@@ -64,3 +66,36 @@ export const requireAuth = (
     });
   }
 };
+
+
+
+export const authorizeRoles = (...allowedRoles: Role[]) => {
+  return (
+    req: Request & { user?: any },
+    res: Response,
+    next: NextFunction
+  ) => {
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    next();
+  };
+};
+
+export const checkHospitalScope = (
+  req: Request & { user?: any },
+  res: Response,
+  next: NextFunction
+) => {
+  const hospitalIdFromParams = req.params.hospitalId;
+
+  if (!req.user?.hospitalId) {
+    return res.status(403).json({ message: "Hospital scope missing" });
+  }
+
+  if (req.user.hospitalId !== hospitalIdFromParams) {
+    return res.status(403).json({ message: "Unauthorized hospital access" });
+  }
+
+  next();
+}

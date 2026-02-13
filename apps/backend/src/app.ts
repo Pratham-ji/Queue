@@ -16,6 +16,11 @@ import otpRoutes from "./auth/otp.routes";
 import queueRoutes from "./routes/queue.routes";
 import testRoutes from "./routes/test.routes"
 
+// Role Base Access Control
+import doctorRoutes from "./routes/doctor.routes";
+import hospitalRoutes from "./routes/hospital.routes";
+
+
 const app = express();
 const server = http.createServer(app);
 
@@ -39,6 +44,10 @@ app.use("/api/queue", queueRoutes);
 // 🔥 OTP AUTH ROUTES (THIS WAS MISSING)
 app.use("/api/auth", otpRoutes);
 app.use("/test", testRoutes);//testing
+
+//  APPLING ROLES
+app.use("/doctor",doctorRoutes);
+app.use("/Hospital",hospitalRoutes);
 
 // Health Check
 app.get("/", (req, res) => {

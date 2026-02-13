@@ -5,6 +5,7 @@ import { jwtConfig } from "../config/jwt";
 interface JwtPayLoad {
   userId: string;
   role: string;
+  hospitalID? : string | null;
   verified: boolean;
 }
 

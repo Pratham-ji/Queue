@@ -1,15 +1,28 @@
+import dotenv from "dotenv";
+// Load Config FIRST, before any other imports
+dotenv.config();
+
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import morgan from "morgan";
 import helmet from "helmet";
-import dotenv from "dotenv";
+
+// ✅ IMPORT OTP ROUTES (IMPORTANT)
 import otpRoutes from "./auth/otp.routes";
 import uploadRoutes from "./routes/upload.routes";
 
 // Existing Queue routes
 import queueRoutes from "./routes/queue.routes";
+import testRoutes from "./routes/test.routes"
+
+// Role Base Access Control
+import doctorRoutes from "./routes/doctor.routes";
+import hospitalRoutes from "./routes/hospital.routes";
+
+//Rate limitting appiled here
+import ratelimit from "express-rate-limit";
 import authRoutes from "./routes/auth.routes";
 import hospitalRoutes from "./routes/hospital.routes";
 import adminRoutes from "./routes/admin.routes";
@@ -44,7 +57,15 @@ const io = new Server(server, {
 // Middleware
 app.use(express.json());
 app.use(cors());
+
+//helmet amd ratelimit both implemented here
 app.use(helmet());
+const globalLimiter = ratelimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per IP
+  message: "Too many requests from this IP. Please try again later.",
+});
+app.use(globalLimiter);
 app.use(morgan("dev"));
 app.use("/api/admin", adminRoutes);
 app.use("/api/upload", uploadRoutes);
@@ -54,6 +75,7 @@ app.use("/api/queue", queueRoutes);
 
 // 🔥 OTP AUTH ROUTES (THIS WAS MISSING)
 app.use("/api/auth", otpRoutes);
+app.use("/test", testRoutes);//testing
 app.use("/api/auth", authRoutes); // This enables /api/auth/login
 
 // --- 🚦 ROUTES ---
@@ -64,10 +86,9 @@ app.use("/api/provider", providerRoutes);
 app.post("/api/booking/create", createAppointment);
 app.get("/api/booking/my-appointments", getMyAppointments); // This will work now
 
-app.post("/api/custom/create", createSession);
-app.post("/api/custom/join", joinSession);
-app.get("/api/custom/:sessionId", getSessionDetails);
-app.post("/api/custom/next", callNext);
+//  APPLING ROLES
+app.use("/doctor", doctorRoutes);
+app.use("/Hospital", hospitalRoutes);
 
 // Health Check
 app.get("/", (req, res) => {

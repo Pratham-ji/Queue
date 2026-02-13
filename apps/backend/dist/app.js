@@ -3,19 +3,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const dotenv_1 = __importDefault(require("dotenv"));
+// Load Config FIRST, before any other imports
+dotenv_1.default.config();
 const express_1 = __importDefault(require("express"));
 const http_1 = __importDefault(require("http"));
 const socket_io_1 = require("socket.io");
 const cors_1 = __importDefault(require("cors"));
 const morgan_1 = __importDefault(require("morgan"));
 const helmet_1 = __importDefault(require("helmet"));
-const dotenv_1 = __importDefault(require("dotenv"));
 // ✅ IMPORT OTP ROUTES (IMPORTANT)
 const otp_routes_1 = __importDefault(require("./auth/otp.routes"));
 // Existing Queue routes
 const queue_routes_1 = __importDefault(require("./routes/queue.routes"));
-// Load Config
-dotenv_1.default.config();
+const test_routes_1 = __importDefault(require("./routes/test.routes"));
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
 // Initialize Socket.io (The "Pulse" of Queue Pro)
@@ -34,6 +35,7 @@ app.use((0, morgan_1.default)("dev"));
 app.use("/api/queue", queue_routes_1.default);
 // 🔥 OTP AUTH ROUTES (THIS WAS MISSING)
 app.use("/api/auth", otp_routes_1.default);
+app.use("/test", test_routes_1.default); //testing
 // Health Check
 app.get("/", (req, res) => {
     res.status(200).json({

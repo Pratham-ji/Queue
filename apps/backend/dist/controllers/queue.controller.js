@@ -9,29 +9,29 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.addPatient = exports.callNextPatient = exports.getQueue = void 0;
+exports.deleteQueue = exports.createQueue = exports.joinQueue = exports.addPatient = exports.callNextPatient = exports.getQueue = void 0;
 const client_1 = require("@prisma/client");
 // Initialize the Database Client
 const prisma = new client_1.PrismaClient();
 // GET QUEUE (Read from Real Database)
 const getQueue = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        // 1. Get the Clinic (For now, we just grab the first one found)
-        const clinic = yield prisma.clinic.findFirst();
-        if (!clinic) {
-            return res.status(404).json({
-                success: false,
-                error: "Clinic not found. Did you run the seed script?",
-            });
-        }
-        // 2. Fetch waiting patients from DB
+        const clinicId = req.params.clinicId;
+        // Fetch waiting patients from DB
         const queue = yield prisma.patient.findMany({
             where: {
-                clinicId: clinic.id,
+                clinicId,
                 status: "WAITING",
             },
             orderBy: { token: "asc" },
         });
+        if (queue.length === 0) {
+            return res.status(200).json({
+                success: true,
+                data: [],
+                message: "Queue is empty",
+            });
+        }
         res.status(200).json({ success: true, data: queue });
     }
     catch (error) {
@@ -121,3 +121,117 @@ const addPatient = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
 });
 exports.addPatient = addPatient;
+// JOIN QUEUE - Allows a user to join a queue
+const joinQueue = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const { name, phone, clinicId } = req.body;
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+        if (!name || !clinicId) {
+            return res.status(400).json({ error: "Name and clinicId are required" });
+        }
+        if (!userId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+        // Check if clinic exists
+        const clinic = yield prisma.clinic.findUnique({
+            where: { id: clinicId },
+        });
+        if (!clinic) {
+            return res.status(404).json({ error: "Clinic not found" });
+        }
+        // Generate token
+        const todayCount = yield prisma.patient.count({
+            where: { clinicId },
+        });
+        const token = todayCount + 1;
+        // Create patient
+        const newPatient = yield prisma.patient.create({
+            data: {
+                name,
+                phone: phone || "",
+                token,
+                status: "WAITING",
+                clinicId,
+            },
+        });
+        // Emit real-time update
+        const io = req.app.get("io");
+        const updatedQueue = yield prisma.patient.findMany({
+            where: { clinicId, status: "WAITING" },
+            orderBy: { token: "asc" },
+        });
+        io.emit("queue_update", updatedQueue);
+        res.status(201).json({ success: true, data: newPatient });
+    }
+    catch (error) {
+        console.error("Error joining queue:", error);
+        res.status(500).json({ success: false, error: "Failed to join queue" });
+    }
+});
+exports.joinQueue = joinQueue;
+// CREATE QUEUE - Provider creates a new clinic/queue
+const createQueue = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const { name, address } = req.body;
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+        if (!name) {
+            return res.status(400).json({ error: "Clinic name is required" });
+        }
+        if (!userId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+        // Check if user already owns a clinic
+        const existingClinic = yield prisma.clinic.findUnique({
+            where: { ownerId: userId },
+        });
+        if (existingClinic) {
+            return res.status(400).json({ error: "You already own a clinic" });
+        }
+        // Create new clinic
+        const newClinic = yield prisma.clinic.create({
+            data: {
+                name,
+                address: address || "",
+                ownerId: userId,
+            },
+        });
+        res.status(201).json({ success: true, data: newClinic });
+    }
+    catch (error) {
+        console.error("Error creating queue:", error);
+        res.status(500).json({ success: false, error: "Failed to create queue" });
+    }
+});
+exports.createQueue = createQueue;
+// DELETE QUEUE - Admin deletes a queue/patient record
+const deleteQueue = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const { id } = req.params;
+        if (!id || Array.isArray(id)) {
+            return res.status(400).json({ message: "Invalid ID" });
+        }
+        if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+        // Delete the patient from queue
+        const deletedPatient = yield prisma.patient.delete({
+            where: { id },
+        });
+        // Emit real-time update
+        const io = req.app.get("io");
+        const updatedQueue = yield prisma.patient.findMany({
+            where: { clinicId: deletedPatient.clinicId, status: "WAITING" },
+            orderBy: { token: "asc" },
+        });
+        io.emit("queue_update", updatedQueue);
+        res.status(200).json({ success: true, message: "Patient removed from queue" });
+    }
+    catch (error) {
+        console.error("Error deleting from queue:", error);
+        res.status(500).json({ success: false, error: "Failed to delete from queue" });
+    }
+});
+exports.deleteQueue = deleteQueue;

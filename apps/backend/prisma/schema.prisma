@@ -36,6 +36,8 @@ model Clinic {
   description String?
   createdAt   DateTime @default(now())
 
+  verified    Boolean  @default(false)
+
   // Relations
   users         User[]          @relation("ClinicToUser") // Staff/Admins of this clinic
   doctors       DoctorProfile[]

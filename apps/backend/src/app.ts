@@ -9,10 +9,12 @@ import dotenv from "dotenv";
 // ✅ IMPORT OTP ROUTES (IMPORTANT)
 import otpRoutes from "./auth/otp.routes";
 
+
 // Existing Queue routes
 import queueRoutes from "./routes/queue.routes";
 import authRoutes from "./routes/auth.routes";
 import hospitalRoutes from "./routes/hospital.routes";
+import adminRoutes from "./routes/admin.routes";
 import providerRoutes from "./routes/provider.routes";
 import {
   createSession,
@@ -46,6 +48,7 @@ app.use(express.json());
 app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
+app.use("/api/admin", adminRoutes);
 
 // ✅ ROUTES
 app.use("/api/queue", queueRoutes);

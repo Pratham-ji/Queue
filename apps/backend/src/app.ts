@@ -20,6 +20,8 @@ import testRoutes from "./routes/test.routes"
 import doctorRoutes from "./routes/doctor.routes";
 import hospitalRoutes from "./routes/hospital.routes";
 
+//Rate limitting appiled here
+import ratelimit from "express-rate-limit";
 
 const app = express();
 const server = http.createServer(app);
@@ -35,7 +37,15 @@ const io = new Server(server, {
 // Middleware
 app.use(express.json());
 app.use(cors());
+
+//helmet amd ratelimit both implemented here
 app.use(helmet());
+const globalLimiter = ratelimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per IP
+  message: "Too many requests from this IP. Please try again later.",
+});
+app.use(globalLimiter);
 app.use(morgan("dev"));
 
 // ✅ ROUTES
@@ -46,8 +56,8 @@ app.use("/api/auth", otpRoutes);
 app.use("/test", testRoutes);//testing
 
 //  APPLING ROLES
-app.use("/doctor",doctorRoutes);
-app.use("/Hospital",hospitalRoutes);
+app.use("/doctor", doctorRoutes);
+app.use("/Hospital", hospitalRoutes);
 
 // Health Check
 app.get("/", (req, res) => {

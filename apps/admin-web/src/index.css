@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Dark Theme Background */
+body {
+    background-color: #0f172a; /* Dark Navy */
+    color: white;
+}

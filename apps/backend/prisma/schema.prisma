@@ -9,39 +9,49 @@ datasource db {
 
 // 1. THE USER (Doctors, Patients, Staff)
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String   // Hashed
-  name      String
-  phone     String?
-  role      Role     @default(PROVIDER)
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  name        String
+  phone       String?
+  role        Role     @default(PROVIDER)
+
+  // --- NEW VERIFICATION FIELDS ---
+  phoneVerified    Boolean @default(false) // For OTP Status
+  aadhaarVerified  Boolean @default(false) // For DigiLocker Status
+  livePhotoUrl     String?                 // The "Selfie" URL
+  // -------------------------------
+
   createdAt DateTime @default(now())
 
-  // Relations
-  clinicId      String?
-  clinic        Clinic?        @relation("ClinicToUser", fields: [clinicId], references: [id])
-
-  doctorProfile DoctorProfile? // If user is a doctor
-  appointments  Appointment[]  // If user booked appointments
+  // Relations...
+  clinicId       String?
+  clinic         Clinic?        @relation("ClinicToUser", fields: [clinicId], references: [id])
+  doctorProfile  DoctorProfile?
+  appointments   Appointment[]
 }
 
 // 2. THE CLINIC
 model Clinic {
   id          String   @id @default(uuid())
-  name        String   // e.g. "Max Hospital"
+  name        String
   address     String
   city        String   @default("Dehradun")
-  image       String   // URL
+  image       String
   rating      Float    @default(4.5)
   description String?
-  createdAt   DateTime @default(now())
-
   verified    Boolean  @default(false)
 
-  // Relations
-  users         User[]          @relation("ClinicToUser") // Staff/Admins of this clinic
-  doctors       DoctorProfile[]
-  patients      Patient[]       // Queue patients
+  // --- NEW DOCS ---
+  addressProofUrl String? // Utility bill or Registration deed
+  // ----------------
+
+  createdAt   DateTime @default(now())
+
+  // Relations...
+  users       User[]   @relation("ClinicToUser")
+  doctors     DoctorProfile[]
+  patients    Patient[]
 }
 
 // 3. THE PATIENT (Queue Items - Walk-ins)
@@ -88,6 +98,13 @@ model DoctorProfile {
   rating      Float    @default(4.8)
   price       Int
   about       String?
+
+  // --- NEW LICENSE FIELDS ---
+  licenseNumber    String?  // e.g. "MCI-12345"
+  registrationYear Int?     // e.g. 2018
+  licenseCertUrl   String?  // URL to the uploaded file
+  degreeCertUrl    String?  // URL to the degree
+  // --------------------------
 
   clinicId    String
   clinic      Clinic   @relation(fields: [clinicId], references: [id])

@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_unicorn_key_123";
 
 // ==========================================
-// 1. SIGN UP (Register)
+// 1. SIGN UP (Secure Registration)
 // ==========================================
 export const signup = async (req: Request, res: Response) => {
   try {
@@ -29,24 +29,34 @@ export const signup = async (req: Request, res: Response) => {
         .json({ success: false, error: "Email already exists" });
     }
 
-    // C. Hash Password (Security First 🔒)
+    // C. Hash Password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // D. Create User
+    // D. Secure Role Assignment (The Fix)
+    // We explicitly map the string to the Enum to prevent errors
+    let assignedRole: Role = Role.PATIENT;
+    if (role === "PROVIDER") assignedRole = Role.PROVIDER;
+    if (role === "ADMIN") assignedRole = Role.ADMIN;
+    if (role === "STAFF") assignedRole = Role.STAFF;
+
+    // E. Create User
     const newUser = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
-        phone,
-        // 2. 👇 UPDATE THIS LINE: Use the Enum, not a string
-        role: role ? (role as Role) : Role.PATIENT,
+        phone: phone || "", // Handle optional phone safely
+        role: assignedRole,
       },
-    }); // E. Generate Token
+    });
+
+    // F. Generate Token
     const token = jwt.sign({ id: newUser.id, role: newUser.role }, JWT_SECRET, {
       expiresIn: "30d",
     });
+
+    console.log(`✅ New User Registered: ${newUser.name} (${newUser.role})`);
 
     res.status(201).json({
       success: true,
@@ -55,12 +65,15 @@ export const signup = async (req: Request, res: Response) => {
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
-        token, // Arjun needs this to store in AsyncStorage
+        token,
       },
     });
   } catch (error: any) {
-    console.error("Signup Error:", error);
-    res.status(500).json({ success: false, error: "Registration failed" });
+    console.error("❌ Signup Error:", error); // Check this log if it fails!
+    res.status(500).json({
+      success: false,
+      error: "Registration failed. Check server logs.",
+    });
   }
 };
 

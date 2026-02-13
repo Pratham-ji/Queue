@@ -11,6 +11,7 @@ import helmet from "helmet";
 
 // ✅ IMPORT OTP ROUTES (IMPORTANT)
 import otpRoutes from "./auth/otp.routes";
+import uploadRoutes from "./routes/upload.routes";
 
 // Existing Queue routes
 import queueRoutes from "./routes/queue.routes";
@@ -22,6 +23,25 @@ import hospitalRoutes from "./routes/hospital.routes";
 
 //Rate limitting appiled here
 import ratelimit from "express-rate-limit";
+import authRoutes from "./routes/auth.routes";
+import hospitalRoutes from "./routes/hospital.routes";
+import adminRoutes from "./routes/admin.routes";
+import providerRoutes from "./routes/provider.routes";
+import {
+  createSession,
+  joinSession,
+  getSessionDetails,
+  callNext,
+} from "./controllers/custom.controller";
+
+// ✅ FIX: Import BOTH functions here
+import {
+  createAppointment,
+  getMyAppointments,
+} from "./controllers/booking.controller";
+
+// Load Config
+dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
@@ -47,6 +67,8 @@ const globalLimiter = ratelimit({
 });
 app.use(globalLimiter);
 app.use(morgan("dev"));
+app.use("/api/admin", adminRoutes);
+app.use("/api/upload", uploadRoutes);
 
 // ✅ ROUTES
 app.use("/api/queue", queueRoutes);
@@ -54,6 +76,15 @@ app.use("/api/queue", queueRoutes);
 // 🔥 OTP AUTH ROUTES (THIS WAS MISSING)
 app.use("/api/auth", otpRoutes);
 app.use("/test", testRoutes);//testing
+app.use("/api/auth", authRoutes); // This enables /api/auth/login
+
+// --- 🚦 ROUTES ---
+app.use("/api/queue", queueRoutes);
+app.use("/api/hospital", hospitalRoutes);
+app.use("/api/provider", providerRoutes);
+
+app.post("/api/booking/create", createAppointment);
+app.get("/api/booking/my-appointments", getMyAppointments); // This will work now
 
 //  APPLING ROLES
 app.use("/doctor", doctorRoutes);

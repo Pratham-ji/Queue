@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,12 +10,13 @@ import {
   StatusBar,
   FlatList,
   ActivityIndicator,
+  RefreshControl, // 👈 Added
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
-import { api } from "../../services/api"; // Your API service
+import { api } from "../../services/api";
 
 const COLORS = {
   primary: "#047857", // Emerald Green
@@ -31,37 +32,60 @@ export default function HomeScreen() {
   const [clinics, setClinics] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // 1. FETCH REAL DATA
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [clinicRes, doctorRes] = await Promise.all([
-          api.get("/hospital/clinics"),
-          api.get("/hospital/doctors"),
-        ]);
+  // 1. FETCH DATA (With Cache Busting)
+  const fetchData = async () => {
+    try {
+      console.log("📡 Fetching Home Data...");
 
-        if (clinicRes.data.success) setClinics(clinicRes.data.data);
-        if (doctorRes.data.success) setDoctors(doctorRes.data.data);
-      } catch (error) {
-        console.error("Failed to load home data", error);
-      } finally {
-        setLoading(false);
+      // 🦄 FIX: Add timestamp to force fresh data (prevents 304 caching issues)
+      const time = new Date().getTime();
+
+      const [clinicRes, doctorRes] = await Promise.all([
+        api.get(`/hospital/clinics?t=${time}`),
+        api.get(`/hospital/doctors?t=${time}`),
+      ]);
+
+      if (clinicRes.data.success) {
+        setClinics(clinicRes.data.data);
       }
-    };
+
+      if (doctorRes.data.success) {
+        setDoctors(doctorRes.data.data);
+      }
+    } catch (error) {
+      console.error("❌ Failed to load home data", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // 2. INITIAL LOAD
+  useEffect(() => {
     fetchData();
   }, []);
 
-  // 1. IMPROVED CLINIC CARD RENDER
+  // 3. PULL TO REFRESH HANDLER
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchData();
+  }, []);
+
+  // RENDER HELPERS
   const renderClinic = ({ item }: { item: any }) => (
     <TouchableOpacity
       activeOpacity={0.9}
       style={styles.clinicCard}
       onPress={() => navigation.navigate("HospitalDetails", { id: item.id })}
     >
-      {/* ⚠️ FIX: Image now fills 100% of height initially */}
       <Image
-        source={{ uri: item.image }}
+        source={{
+          uri:
+            item.image ||
+            "https://images.unsplash.com/photo-1538108149393-fbbd81897560?w=500&auto=format&fit=crop&q=60",
+        }}
         style={styles.clinicImage}
         resizeMode="cover"
       />
@@ -78,7 +102,7 @@ export default function HomeScreen() {
         </Text>
         <View style={styles.ratingTag}>
           <Ionicons name="star" size={10} color="#FFF" />
-          <Text style={styles.ratingNum}>{item.rating}</Text>
+          <Text style={styles.ratingNum}>{item.rating || "4.8"}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -91,7 +115,12 @@ export default function HomeScreen() {
       onPress={() => navigation.navigate("Booking", { doctorId: item.id })}
     >
       <View style={styles.docImgWrap}>
-        <Image source={{ uri: item.image }} style={styles.docImage} />
+        <Image
+          source={{
+            uri: item.image || `https://i.pravatar.cc/150?u=${item.id}`,
+          }}
+          style={styles.docImage}
+        />
         <View style={styles.verifiedBadge}>
           <Ionicons name="checkmark" size={10} color="#FFF" />
         </View>
@@ -99,14 +128,14 @@ export default function HomeScreen() {
       <Text style={styles.docName} numberOfLines={1}>
         {item.name}
       </Text>
-      <Text style={styles.docSpec}>{item.specialty}</Text>
+      <Text style={styles.docSpec}>{item.specialty || "Specialist"}</Text>
       <View style={styles.priceTag}>
-        <Text style={styles.priceText}>₹{item.price}</Text>
+        <Text style={styles.priceText}>₹{item.price || "500"}</Text>
       </View>
     </TouchableOpacity>
   );
 
-  if (loading) {
+  if (loading && !refreshing) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -130,22 +159,16 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* SEARCH BAR */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color={COLORS.subText} />
-        <TextInput
-          placeholder="Search for clinics, doctors..."
-          style={styles.searchInput}
-          placeholderTextColor={COLORS.subText}
-        />
-        <View style={styles.filterBtn}>
-          <Ionicons name="options" size={20} color="#FFF" />
-        </View>
-      </View>
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[COLORS.primary]}
+          />
+        }
       >
         {/* BANNER */}
         <View style={styles.banner}>
@@ -179,6 +202,18 @@ export default function HomeScreen() {
           keyExtractor={(item) => item.id}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 20 }}
+          // 🦄 FIX: Show something if list is empty
+          ListEmptyComponent={
+            <Text
+              style={{
+                marginLeft: 20,
+                color: COLORS.subText,
+                fontStyle: "italic",
+              }}
+            >
+              No clinics found nearby.
+            </Text>
+          }
         />
 
         {/* TOP DOCTORS SECTION */}
@@ -196,6 +231,16 @@ export default function HomeScreen() {
           keyExtractor={(item) => item.id}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 20 }}
+          ListEmptyComponent={
+            <Text
+              style={{
+                color: COLORS.subText,
+                fontStyle: "italic",
+              }}
+            >
+              No doctors available.
+            </Text>
+          }
         />
       </ScrollView>
     </SafeAreaView>
@@ -220,7 +265,6 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     backgroundColor: "#E2E8F0",
   },
-
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -244,7 +288,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   banner: {
     backgroundColor: COLORS.primary,
     marginHorizontal: 20,
@@ -269,7 +312,6 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   bannerBtnText: { color: COLORS.primary, fontWeight: "700", fontSize: 12 },
-
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -279,22 +321,17 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 18, fontWeight: "700", color: COLORS.text },
   seeAll: { color: COLORS.primary, fontWeight: "600", fontSize: 14 },
-
-  // CLINIC CARD
   clinicCard: {
     width: 260,
-    height: 180, // Fixed height for consistency
-    backgroundColor: "#F1F5F9", // Fallback color
+    height: 180,
+    backgroundColor: "#F1F5F9",
     borderRadius: 20,
     marginRight: 16,
-    overflow: "hidden", // Crucial for image clipping
+    overflow: "hidden",
     position: "relative",
     marginBottom: 10,
   },
-  clinicImage: {
-    width: "100%",
-    height: "100%", // Fills the card
-  },
+  clinicImage: { width: "100%", height: "100%" },
   cardGradient: {
     position: "absolute",
     bottom: 0,
@@ -302,12 +339,7 @@ const styles = StyleSheet.create({
     right: 0,
     height: 100,
   },
-  clinicOverlay: {
-    position: "absolute",
-    bottom: 12,
-    left: 12,
-    right: 12,
-  },
+  clinicOverlay: { position: "absolute", bottom: 12, left: 12, right: 12 },
   clinicName: {
     fontSize: 16,
     fontWeight: "700",
@@ -325,9 +357,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   ratingNum: { color: "#FFF", fontSize: 10, fontWeight: "700", marginLeft: 4 },
-  docCount: { fontSize: 12, color: COLORS.subText, marginLeft: 4 },
-
-  // DOCTOR CARD
   docCard: {
     width: 140,
     backgroundColor: COLORS.white,

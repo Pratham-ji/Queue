@@ -1,14 +1,14 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 
+// Use a single Prisma instance (Best Practice)
 const prisma = new PrismaClient();
 
 // ==========================================
-// CREATE APPOINTMENT
+// CREATE APPOINTMENT (Now with Socket.io! ⚡)
 // ==========================================
 export const createAppointment = async (req: Request, res: Response) => {
   try {
-    // ⚠️ UPDATE: We now expect doctorId instead of clinicId
     const { doctorId, patientName, date, time } = req.body;
 
     if (!doctorId || !patientName || !date || !time) {
@@ -21,13 +21,31 @@ export const createAppointment = async (req: Request, res: Response) => {
     // 1. Create Booking linked to the Doctor
     const newAppointment = await prisma.appointment.create({
       data: {
-        doctorId, // Link to the specific doctor
+        doctorId,
         patientName,
         date,
         time,
         status: "CONFIRMED",
       },
     });
+
+    // 2. REAL-TIME MAGIC: Find the clinic this doctor belongs to
+    const doctor = await prisma.doctorProfile.findUnique({
+      where: { id: doctorId },
+      select: { clinicId: true, name: true }, // We just need the clinicId to find the right Socket room
+    });
+
+    // 3. Broadcast to the Clinic's live dashboard!
+    if (doctor && doctor.clinicId) {
+      const io = req.app.get("io"); // Grab the Socket engine from app.ts
+
+      io.to(doctor.clinicId).emit("new_patient_joined", {
+        message: `🚨 ${patientName} just booked Dr. ${doctor.name} for ${time}!`,
+        appointment: newAppointment,
+      });
+
+      console.log(`📡 Broadcasted to Clinic Room: ${doctor.clinicId}`);
+    }
 
     console.log(
       `✅ New Booking: ${patientName} with Doctor ${doctorId} on ${date}`,
@@ -46,7 +64,7 @@ export const createAppointment = async (req: Request, res: Response) => {
 };
 
 // ==========================================
-// GET MY APPOINTMENTS
+// GET MY APPOINTMENTS (Unchanged)
 // ==========================================
 export const getMyAppointments = async (req: Request, res: Response) => {
   try {
@@ -59,18 +77,11 @@ export const getMyAppointments = async (req: Request, res: Response) => {
     }
 
     const appointments = await prisma.appointment.findMany({
-      where: {
-        patientName: String(patientName),
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      // ⚠️ UPDATE: Fetch Doctor AND their Clinic
+      where: { patientName: String(patientName) },
+      orderBy: { createdAt: "desc" },
       include: {
         doctor: {
-          include: {
-            clinic: true, // Get the hospital details via the doctor
-          },
+          include: { clinic: true },
         },
       },
     });

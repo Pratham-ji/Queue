@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { Role } from "@prisma/client";
 
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_unicorn_key_123";
 
@@ -50,4 +51,14 @@ export const authorize = (...roles: string[]) => {
     }
     next();
   };
+};
+
+// THIS NEW FUNCTION TO FIX THE RED LINE
+export const adminOnly = (req: Request, res: Response, next: NextFunction) => {
+  // @ts-ignore - 'user' is added by the protect middleware
+  if (req.user && req.user.role === Role.SUPER_ADMIN) {
+    next();
+  } else {
+    res.status(403).json({ error: "Not authorized as admin" });
+  }
 };

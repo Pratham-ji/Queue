@@ -67,11 +67,19 @@ app.post("/api/custom/join", joinSession);
 app.get("/api/custom/:sessionId", getSessionDetails);
 app.post("/api/custom/next", callNext);
 
-// Health Check
+// Health Check & Socket Test Trigger
 app.get("/", (req, res) => {
+  const io = req.app.get("io");
+
+  // Broadcast a global shout to all connected dashboards
+  io.emit("new_patient_joined", {
+    message: "🚨 VIP Patient: Satyam just booked an emergency appointment!",
+  });
+
   res.status(200).json({
     status: "active",
     service: "Queue Pro API",
+    socketTest: "Broadcast Sent!",
   });
 });
 
@@ -95,6 +103,7 @@ io.on("connection", (socket) => {
 });
 
 app.set("io", io);
+app.disable('etag');
 
 // Start Server
 const PORT = process.env.PORT || 5001;

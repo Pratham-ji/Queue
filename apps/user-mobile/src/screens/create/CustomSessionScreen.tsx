@@ -13,10 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { io } from "socket.io-client";
-import { api } from "../../services/api";
-
-// const BASE_URL = "http://192.168.31.69:5001"; // home ip
-const SOCKET_URL = "http://172.20.10.2:5001"; // jio phone
+import { api, BASE_URL } from "../../services/api"; // 👈 IMPORT BASE_URL
 
 export default function CustomSessionScreen() {
   const route = useRoute<any>();
@@ -26,19 +23,36 @@ export default function CustomSessionScreen() {
   const [queue, setQueue] = useState<any[]>([]);
 
   useEffect(() => {
-    // 1. Connect
-    const socket = io(SOCKET_URL);
-    socket.emit("join_session_room", session.id);
+    // 1. Connect using the SAME dynamic IP as the rest of the app
+    // We strip '/api' from the BASE_URL to get the root server URL
+    const SERVER_URL = BASE_URL.replace("/api", "");
+
+    console.log("🔌 Connecting Custom Socket to:", SERVER_URL);
+
+    // Added transports: ['websocket'] for better stability on phones
+    const socket = io(SERVER_URL, {
+      transports: ["websocket"],
+    });
+
+    socket.on("connect", () => {
+      console.log("✅ Custom Socket Connected:", socket.id);
+      socket.emit("join_session_room", session.id);
+    });
 
     // 2. Listen for New Joins
     socket.on("participant_joined", (p) => {
       setQueue((prev) => [...prev, p]);
     });
 
-    // 3. Listen for Status Updates (The Magic ✨)
+    // 3. Listen for Status Updates
+    socket.on("queue_updated_list", (fullList) => {
+      console.log("Syncing Full List...");
+      setQueue(fullList);
+    });
+
     socket.on("queue_updated", (updatedPerson) => {
-      setQueue((prevQueue) =>
-        prevQueue.map((p) => (p.id === updatedPerson.id ? updatedPerson : p)),
+      setQueue((prev) =>
+        prev.map((p) => (p.id === updatedPerson.id ? updatedPerson : p)),
       );
     });
 
@@ -57,17 +71,14 @@ export default function CustomSessionScreen() {
     } catch (e) {}
   };
 
-  // 1. SMART LOGIC: Check if anyone is actually waiting
   const waitingParticipants = queue.filter((p) => p.status === "WAITING");
   const isQueueEmpty = waitingParticipants.length === 0;
 
   const handleCallNext = async () => {
-    // Safety Check: Stop execution if queue is empty
     if (isQueueEmpty) {
       Alert.alert("All Caught Up", "There is no one left in the waiting list!");
       return;
     }
-
     try {
       const res = await api.post("/custom/next", { sessionId: session.id });
       if (!res.data.success) {
@@ -78,8 +89,6 @@ export default function CustomSessionScreen() {
     }
   };
 
-  // 2. HELPER TO CHECK WAITING STATUS
-  const hasWaitingParticipants = queue.some((p) => p.status === "WAITING");
   const shareCode = () => {
     Share.share({ message: `Join my Queue! Code: ${session.joinCode}` });
   };
@@ -150,8 +159,6 @@ export default function CustomSessionScreen() {
                   </Text>
                 </View>
                 <Text style={styles.name}>{item.name}</Text>
-
-                {/* STATUS BADGE */}
                 <View
                   style={[
                     styles.statusPill,
@@ -177,14 +184,12 @@ export default function CustomSessionScreen() {
         )}
       </View>
 
-      {/* HOST FOOTER */}
       {role === "HOST" && (
         <View style={styles.footer}>
           <TouchableOpacity
-            // 2. VISUAL FEEDBACK: Turn button Grey if empty
             style={[styles.callBtn, isQueueEmpty && styles.disabledBtn]}
             onPress={handleCallNext}
-            activeOpacity={isQueueEmpty ? 1 : 0.7} // Disable click effect if empty
+            activeOpacity={isQueueEmpty ? 1 : 0.7}
           >
             <Text style={styles.callText}>
               {isQueueEmpty ? "Queue Empty" : "Call Next Person"}
@@ -237,7 +242,6 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 1,
   },
-
   listArea: {
     flex: 1,
     backgroundColor: "#FFF",
@@ -260,7 +264,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   countText: { fontWeight: "700", color: "#64748B", fontSize: 12 },
-
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -271,8 +274,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#F1F5F9",
   },
-  activeRow: { borderColor: "#10B981", backgroundColor: "#F0FDF4" }, // Highlight Active User
-
+  activeRow: { borderColor: "#10B981", backgroundColor: "#F0FDF4" },
   tokenCircle: {
     width: 44,
     height: 44,
@@ -284,14 +286,11 @@ const styles = StyleSheet.create({
   },
   activeToken: { backgroundColor: "#10B981" },
   tokenNum: { color: "#64748B", fontWeight: "800", fontSize: 16 },
-
   name: { fontSize: 16, fontWeight: "700", color: "#1E293B", flex: 1 },
   statusPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
   statusText: { fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
-
   empty: { alignItems: "center", marginTop: 60 },
   emptyText: { color: "#94A3B8", fontSize: 14, fontWeight: "500" },
-
   footer: {
     padding: 24,
     borderTopWidth: 1,
@@ -309,16 +308,5 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   callText: { color: "#FFF", fontWeight: "800", fontSize: 16 },
-  waitingText: {
-    textAlign: "center",
-    color: "#64748B",
-    fontStyle: "italic",
-    fontWeight: "500",
-  },
-  // ADD DISABLED STYLE
-  disabledBtn: {
-    backgroundColor: "#94A3B8", // Slate 400 (Grey)
-    elevation: 0,
-    shadowOpacity: 0,
-  },
+  disabledBtn: { backgroundColor: "#94A3B8", elevation: 0, shadowOpacity: 0 },
 });

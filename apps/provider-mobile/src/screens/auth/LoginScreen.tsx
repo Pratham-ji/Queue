@@ -13,6 +13,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Animatable from "react-native-animatable";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { api } from "../../services/api";
 
 const COLORS = {
   primary: "#0F62FE", // IBM Blue - Professional & Trustworthy
@@ -32,13 +34,37 @@ export default function LoginScreen({ navigation }: any) {
   const [isLoading, setIsLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setIsLoading(true);
-    // Simulate a smooth "Network Request" delay without lagging the UI
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // 1. Hit the Real Backend
+      const res = await api.post("/auth/login", { email, password });
+
+      // 2. Extract Data
+      const { token, user } = res.data;
+      const clinicId = user.clinicId;
+
+      if (!clinicId) {
+        alert("Error: No Clinic assigned to this account.");
+        setIsLoading(false);
+        return;
+      }
+
+      // 3. Save EVERYTHING needed for the session
+      await AsyncStorage.multiSet([
+        ["token", token],
+        ["clinicId", clinicId], // 👈 THIS IS THE KEY TO SCALABILITY
+        ["userName", user.name],
+      ]);
+
+      console.log("✅ Login Success! Clinic ID:", clinicId);
       navigation.replace("Dashboard");
-    }, 800);
+    } catch (error: any) {
+      console.error("Login Failed:", error);
+      alert(error.response?.data?.error || "Login failed");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

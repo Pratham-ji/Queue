@@ -4,7 +4,7 @@ import { Platform } from "react-native";
 // 🔧 CONFIG: Your Laptop's Current IP (Home WiFi)
 // If you switch back to Hotspot, change this to 172.20.10.2
 // const BASE_URL = "http://192.168.31.69:5001"; // home ip
- const BASE_URL = "http://172.20.10.2:5001"; // jio phone
+export const BASE_URL = "http://172.20.10.3:5001"; // jio phone
 
 // 1. Create the Axios Instance
 export const api = axios.create({

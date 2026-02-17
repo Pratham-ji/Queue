@@ -9,37 +9,49 @@ datasource db {
 
 // 1. THE USER (Doctors, Patients, Staff)
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String   // Hashed
-  name      String
-  phone     String?
-  role      Role     @default(PROVIDER)
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  name        String
+  phone       String?
+  role        Role     @default(PATIENT)
+
+  // --- NEW VERIFICATION FIELDS ---
+  phoneVerified    Boolean @default(false) // For OTP Status
+  aadhaarVerified  Boolean @default(false) // For DigiLocker Status
+  livePhotoUrl     String?                 // The "Selfie" URL
+  // -------------------------------
+
   createdAt DateTime @default(now())
 
-  // Relations
-  clinicId      String?
-  clinic        Clinic?        @relation("ClinicToUser", fields: [clinicId], references: [id])
-
-  doctorProfile DoctorProfile? // If user is a doctor
-  appointments  Appointment[]  // If user booked appointments
+  // Relations...
+  clinicId        String?
+  clinic          Clinic?   @relation(fields: [clinicId], references: [id])
+  doctorProfile  DoctorProfile?
+  appointments   Appointment[]
 }
 
 // 2. THE CLINIC
 model Clinic {
   id          String   @id @default(uuid())
-  name        String   // e.g. "Max Hospital"
+  name        String
   address     String
   city        String   @default("Dehradun")
-  image       String   // URL
+  image       String
   rating      Float    @default(4.5)
   description String?
+  verified    Boolean  @default(false)
+
+  // --- NEW DOCS ---
+  addressProofUrl String? // Utility bill or Registration deed
+  // ----------------
+
   createdAt   DateTime @default(now())
 
-  // Relations
-  users         User[]          @relation("ClinicToUser") // Staff/Admins of this clinic
-  doctors       DoctorProfile[]
-  patients      Patient[]       // Queue patients
+  // Relations...
+  users   User[] // The staff members belonging to this clinic
+  doctors     DoctorProfile[]
+  patients    Patient[]
 }
 
 // 3. THE PATIENT (Queue Items - Walk-ins)
@@ -87,6 +99,13 @@ model DoctorProfile {
   price       Int
   about       String?
 
+  // --- NEW LICENSE FIELDS ---
+  licenseNumber    String?  // e.g. "MCI-12345"
+  registrationYear Int?     // e.g. 2018
+  licenseCertUrl   String?  // URL to the uploaded file
+  degreeCertUrl    String?  // URL to the degree
+  // --------------------------
+
   clinicId    String
   clinic      Clinic   @relation(fields: [clinicId], references: [id])
 
@@ -98,33 +117,33 @@ model DoctorProfile {
 
 // 6. INSTANT QUEUE (USP Feature)
 model CustomSession {
-  id          String   @id @default(uuid())
-  hostName    String
-  title       String
-  joinCode    String   @unique
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-
-  participants SessionParticipant[]
+  id           String              @id @default(uuid())
+  title        String
+  joinCode     String              @unique
+  hostId       String
+  hostName     String
+  createdAt    DateTime            @default(now())
+  status       String              @default("ACTIVE") // ACTIVE, ENDED
+  participants CustomParticipant[]
 }
 
-model SessionParticipant {
-  id        String   @id @default(uuid())
+model CustomParticipant {
+  id        String        @id @default(uuid())
   name      String
   token     Int
-  status    String   @default("WAITING")
-  joinedAt  DateTime @default(now())
-
+  status    String        @default("WAITING") // WAITING, SERVING, COMPLETED
   sessionId String
   session   CustomSession @relation(fields: [sessionId], references: [id])
 }
 
 // --- ENUMS ---
 enum Role {
-  PATIENT
-  PROVIDER
-  ADMIN
-  STAFF
+  SUPER_ADMIN   // You (The Developer)
+  HOSPITAL_ADMIN // The Hospital Owner
+  DOCTOR        // Can write prescriptions
+  PHARMACIST    // Can view prescriptions & medicines
+  STAFF         // (Peon) Can only call "Next"
+  PATIENT       // Normal user
 }
 
 enum VisitType {

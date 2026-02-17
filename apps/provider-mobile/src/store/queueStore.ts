@@ -12,7 +12,7 @@ export interface Patient {
 }
 
 // 🔑 YOUR REAL CLINIC ID
-const CLINIC_ID = "c86b8cc6-d4a3-4d30-acd6-98066ba616ee";
+const CLINIC_ID = "eb2f2af4-84ab-4dd0-944c-d5635cdc4c97";
 
 interface QueueState {
   currentPatient: Patient | null;

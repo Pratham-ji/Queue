@@ -1,36 +1,40 @@
 import { create } from "zustand";
-import { api } from "../services/api";
+import { api, BASE_URL } from "../services/api";
 import { io } from "socket.io-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// 🔧 SOCKET SETUP
-// const SOCKET_URL = "http://192.168.31.69:5001"; // home ip
-const SOCKET_URL = "http://172.20.10.2:5001"; // phone
+// Strip "/api" from BASE_URL to get root URL
+const SERVER_URL = BASE_URL.replace(/\/api\/?$/, "");
 
-const socket = io(SOCKET_URL, {
+const socket = io(SERVER_URL, {
   transports: ["websocket"],
   autoConnect: false,
 });
 
-const CLINIC_ID = "c86b8cc6-d4a3-4d30-acd6-98066ba616ee";
-
 interface UserQueueState {
+  clinicId: string | null;
   isLoading: boolean;
   activeToken: number | null;
   queueStatus: "IDLE" | "JOINED";
   queue: any[];
   peopleAhead: number;
   currentServingToken: number | null;
-  estimatedWait: number; // In minutes
+  estimatedWait: number;
 
-  joinQueue: (name: string, phone: string) => Promise<void>;
+  setClinicId: (id: string) => void;
+  joinQueue: (
+    name: string,
+    phone: string,
+    targetClinicId: string,
+  ) => Promise<void>;
   leaveQueue: () => Promise<void>;
-  initializeSocket: () => void;
-  loadSession: () => Promise<void>;
-  refreshData: () => Promise<void>;
+  initializeSocket: (id: string) => void;
+  refreshData: (id: string) => Promise<void>;
+  loadSession: () => Promise<void>; // 👈 RESTORED TYPE
 }
 
 export const useUserQueueStore = create<UserQueueState>((set, get) => ({
+  clinicId: null,
   isLoading: false,
   activeToken: null,
   queueStatus: "IDLE",
@@ -39,19 +43,26 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
   currentServingToken: null,
   estimatedWait: 0,
 
-  // 1. JOIN QUEUE
-  joinQueue: async (name, phone) => {
-    if (!name) return;
-    set({ isLoading: true });
+  setClinicId: (id) => set({ clinicId: id }),
+
+  joinQueue: async (name, phone, targetClinicId) => {
+    if (!targetClinicId || !name) return;
+    set({ isLoading: true, clinicId: targetClinicId });
+
     try {
-      const res = await api.post(`/queue/${CLINIC_ID}/add`, { name, phone });
+      const res = await api.post(`/queue/${targetClinicId}/add`, {
+        name,
+        phone,
+      });
 
       if (res.data.success) {
         const token = res.data.data.token;
         set({ activeToken: token, queueStatus: "JOINED" });
         await AsyncStorage.setItem("user_token", token.toString());
-        get().initializeSocket();
-        get().refreshData();
+        await AsyncStorage.setItem("saved_clinic_id", targetClinicId);
+
+        get().initializeSocket(targetClinicId);
+        get().refreshData(targetClinicId);
       }
     } catch (error) {
       console.error("❌ Join Failed:", error);
@@ -60,83 +71,77 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
     }
   },
 
-  // 2. LEAVE QUEUE
   leaveQueue: async () => {
     set({
       activeToken: null,
       queueStatus: "IDLE",
       peopleAhead: 0,
       estimatedWait: 0,
-      currentServingToken: null,
     });
     await AsyncStorage.removeItem("user_token");
+    await AsyncStorage.removeItem("saved_clinic_id");
     socket.disconnect();
   },
 
-  // 3. LISTEN TO LIVE UPDATES
-  initializeSocket: () => {
+  initializeSocket: (id) => {
     if (!socket.connected) {
       socket.connect();
-      socket.emit("join_clinic", CLINIC_ID);
+      socket.emit("join_clinic", id);
     }
 
-    // A. Queue List Update
     socket.off("queue_update");
     socket.on("queue_update", (updatedQueue: any[]) => {
-      console.log("⚡ Socket: Queue List Updated");
       set({ queue: updatedQueue });
-
       const { activeToken } = get();
       if (activeToken) {
         const myIndex = updatedQueue.findIndex((p) => p.token === activeToken);
-        const ahead = myIndex === -1 ? 0 : myIndex;
-        set({ peopleAhead: ahead, estimatedWait: ahead * 10 });
+        set({ peopleAhead: myIndex === -1 ? 0 : myIndex });
       }
     });
 
-    // B. Current Patient Update
     socket.off("current_patient");
     socket.on("current_patient", (patient: any) => {
-      console.log("⚡ Socket: Now Serving #", patient.token);
       set({ currentServingToken: patient.token });
-      get().refreshData(); // Force sync
+      get().refreshData(id);
     });
   },
 
-  // 4. FORCE REFRESH (Crucial Fix)
-  refreshData: async () => {
+  refreshData: async (id) => {
     try {
-      const res = await api.get(`/queue/${CLINIC_ID}`);
-
+      const res = await api.get(`/queue/${id}`);
       if (res.data.success) {
-        const list = res.data.data; // Waiting List
-        const current = res.data.current; // Currently Serving
-
         set({
-          queue: list,
-          currentServingToken: current ? current.token : null,
+          queue: res.data.data,
+          currentServingToken: res.data.current?.token || null,
         });
-
-        // Recalculate Position
-        const { activeToken } = get();
+        const { activeToken, queue } = get();
         if (activeToken) {
-          const myIndex = list.findIndex((p: any) => p.token === activeToken);
-          const ahead = myIndex === -1 ? 0 : myIndex;
-          set({ peopleAhead: ahead, estimatedWait: ahead * 10 });
+          const myIndex = queue.findIndex((p: any) => p.token === activeToken);
+          set({ peopleAhead: myIndex === -1 ? 0 : myIndex });
         }
       }
     } catch (error) {
-      console.log("Silent refresh failed - Check Network/IP");
+      console.log("Silent refresh failed");
     }
   },
 
-  // 5. RESTORE SESSION
+  // 👇 THE RESTORED FUNCTION (Fixes the White Screen)
   loadSession: async () => {
-    const savedToken = await AsyncStorage.getItem("user_token");
-    if (savedToken) {
-      set({ activeToken: parseInt(savedToken), queueStatus: "JOINED" });
-      get().initializeSocket();
-      get().refreshData();
+    try {
+      const savedToken = await AsyncStorage.getItem("user_token");
+      const savedClinicId = await AsyncStorage.getItem("saved_clinic_id");
+
+      if (savedToken && savedClinicId) {
+        set({
+          activeToken: parseInt(savedToken),
+          queueStatus: "JOINED",
+          clinicId: savedClinicId,
+        });
+        get().initializeSocket(savedClinicId);
+        get().refreshData(savedClinicId);
+      }
+    } catch (e) {
+      console.error("Session Load Error", e);
     }
   },
 }));

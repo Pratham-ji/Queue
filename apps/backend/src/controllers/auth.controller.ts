@@ -1,14 +1,15 @@
 import { Request, Response } from "express";
-// 1. 👇 UPDATE IMPORT: Add 'Role' to this line
 import { PrismaClient, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
+
+// 🔐 UNIFORM SECRET KEY (Fixes the login crash)
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_unicorn_key_123";
 
 // ==========================================
-// 1. SIGN UP (Secure Registration)
+// 1. SIGN UP
 // ==========================================
 export const signup = async (req: Request, res: Response) => {
   try {
@@ -33,12 +34,15 @@ export const signup = async (req: Request, res: Response) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // D. Secure Role Assignment (The Fix)
-    // We explicitly map the string to the Enum to prevent errors
+    // D. Secure Role Assignment
     let assignedRole: Role = Role.PATIENT;
-    if (role === "PROVIDER") assignedRole = Role.PROVIDER;
-    if (role === "ADMIN") assignedRole = Role.ADMIN;
+
+    if (role === "PROVIDER" || role === "DOCTOR") assignedRole = Role.DOCTOR;
+    if (role === "ADMIN" || role === "HOSPITAL_ADMIN")
+      assignedRole = Role.HOSPITAL_ADMIN;
     if (role === "STAFF") assignedRole = Role.STAFF;
+    if (role === "PHARMACIST") assignedRole = Role.PHARMACIST;
+    if (role === "SUPER_ADMIN") assignedRole = Role.SUPER_ADMIN;
 
     // E. Create User
     const newUser = await prisma.user.create({
@@ -46,15 +50,17 @@ export const signup = async (req: Request, res: Response) => {
         name,
         email,
         password: hashedPassword,
-        phone: phone || "", // Handle optional phone safely
+        phone: phone || "",
         role: assignedRole,
       },
     });
 
-    // F. Generate Token
-    const token = jwt.sign({ id: newUser.id, role: newUser.role }, JWT_SECRET, {
-      expiresIn: "30d",
-    });
+    // F. Generate Token (Using the UNIFORM secret)
+    const token = jwt.sign(
+      { id: newUser.id, role: newUser.role, clinicId: newUser.clinicId },
+      JWT_SECRET,
+      { expiresIn: "30d" },
+    );
 
     console.log(`✅ New User Registered: ${newUser.name} (${newUser.role})`);
 
@@ -69,63 +75,63 @@ export const signup = async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    console.error("❌ Signup Error:", error); // Check this log if it fails!
-    res.status(500).json({
-      success: false,
-      error: "Registration failed. Check server logs.",
-    });
+    console.error("❌ Signup Error:", error);
+    res.status(500).json({ success: false, error: "Registration failed." });
   }
 };
 
 // ==========================================
-// 2. LOGIN (Sign In)
+// 2. LOGIN (Fixed & Robust)
 // ==========================================
 export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    // A. Validation
-    if (!email || !password) {
-      return res
-        .status(400)
-        .json({ success: false, error: "Email and Password required" });
-    }
-
-    // B. Find User
+    // 1. Find User
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       return res
         .status(400)
-        .json({ success: false, error: "Invalid credentials" });
+        .json({ error: "Invalid Credentials (User not found)" });
     }
 
-    // C. Verify Password
+    // 2. Check Password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res
         .status(400)
-        .json({ success: false, error: "Invalid credentials" });
+        .json({ error: "Invalid Credentials (Password mismatch)" });
     }
 
-    // D. Generate Token
-    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, {
-      expiresIn: "30d",
-    });
+    // 3. Generate Token (Using the SAME secret as signup)
+    // We also safely handle clinicId being null
+    const token = jwt.sign(
+      {
+        id: user.id,
+        role: user.role,
+        clinicId: user.clinicId || "", // Safe handling for Super Admins
+      },
+      JWT_SECRET,
+      { expiresIn: "7d" },
+    );
 
-    console.log(`✅ User Logged In: ${user.name}`);
+    console.log(`🔓 Login Success: ${user.email} [${user.role}]`);
 
+    // 4. Send Response
     res.status(200).json({
       success: true,
-      data: {
+      token,
+      user: {
         id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
-        token,
+        clinicId: user.clinicId,
       },
     });
   } catch (error: any) {
-    console.error("Login Error:", error);
-    res.status(500).json({ success: false, error: "Login failed" });
+    // THIS LOG IS CRITICAL FOR DEBUGGING
+    console.error("❌ Login Server Crash:", error);
+    res.status(500).json({ error: "Internal Server Error during Login" });
   }
 };

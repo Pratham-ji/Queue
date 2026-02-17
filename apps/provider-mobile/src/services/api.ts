@@ -4,7 +4,7 @@ import { Platform } from "react-native";
 
 // 🔧 CONFIG: Use your real IP for BOTH Android and iOS
 // (Since you are on a Hotspot, localhost won't work on a physical iPhone)
-const BASE_URL = "http://172.20.10.2:5001";
+const BASE_URL = "http://172.20.10.3:5001";
 //const BASE_URL = "http://192.168.31.69:5001";
 
 // 1. HTTP CLIENT

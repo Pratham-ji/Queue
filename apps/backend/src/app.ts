@@ -24,7 +24,6 @@ import hospitalRoutes from "./routes/hospital.routes";
 //Rate limitting appiled here
 import ratelimit from "express-rate-limit";
 import authRoutes from "./routes/auth.routes";
-import hospitalRoutes from "./routes/hospital.routes";
 import adminRoutes from "./routes/admin.routes";
 import providerRoutes from "./routes/provider.routes";
 import {

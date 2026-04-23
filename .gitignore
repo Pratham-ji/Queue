@@ -3,21 +3,26 @@ node_modules/
 npm-debug.log*
 yarn-error.log*
 
-# Firebase
-.firebase/
-firebase-debug.log
-firestore-debug.log
-
 # Environment files
 .env
 .env.local
 .env.production
+.env.staging
 
-# Flutter
+# Build outputs
+dist/
 build/
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
+.next/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
 
 # IDE
 .vscode/
@@ -26,3 +31,16 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Secrets
+jwt.txt
+*.pem
+*.key
+
+# Expo
+.expo/
+
+# Flutter (legacy)
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies

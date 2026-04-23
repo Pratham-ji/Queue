@@ -1,10 +1,8 @@
 import axios from "axios";
-import { Platform } from "react-native";
 
-// 🔧 CONFIG: Your Laptop's Current IP (Home WiFi)
-// If you switch back to Hotspot, change this to 172.20.10.2
-// const BASE_URL = "http://192.168.31.69:5001"; // home ip
- const BASE_URL = "http://172.20.10.2:5001"; // jio phone
+// Environment-driven API URL — set in .env file
+// EXPO_PUBLIC_ prefix makes it available at build time in Expo
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5001";
 
 // 1. Create the Axios Instance
 export const api = axios.create({
@@ -15,21 +13,35 @@ export const api = axios.create({
   },
 });
 
-// 2. Add Logger (Optional but amazing for debugging)
+// 2. Request interceptor (silent in production)
 api.interceptors.request.use((request) => {
-  console.log(
-    "📡 User App Request:",
-    request.method?.toUpperCase(),
-    request.url,
-  );
+  if (__DEV__) {
+    console.log(
+      "📡 User App Request:",
+      request.method?.toUpperCase(),
+      request.url,
+    );
+  }
   return request;
 });
 
-// 3. Add Error Handling (So the app doesn't crash silently)
+// 3. Response interceptor — handle errors + token expiry
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    console.error("❌ API Error:", error.response?.data || error.message);
+  async (error) => {
+    // Token expired or invalid — redirect to login
+    if (error.response?.status === 401) {
+      try {
+        const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+        await AsyncStorage.removeItem("user_token");
+        await AsyncStorage.removeItem("access_token");
+      } catch (_) {
+        // Storage cleanup failed — not critical
+      }
+    }
+    if (__DEV__) {
+      console.error("❌ API Error:", error.response?.data || error.message);
+    }
     return Promise.reject(error);
   },
 );

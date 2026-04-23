@@ -10,7 +10,11 @@ export function sendOTP(req: Request, res: Response) {
     }
 
     const otp = generateOTP(phone);
-    console.log(`OTP for ${phone} : ${otp}`);
+
+    // DEV ONLY: Log OTP for testing — NEVER in production
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[DEV] OTP for ${phone}: ${otp}`);
+    }
     
     return res.json({
         message: "OTP sent successfully",

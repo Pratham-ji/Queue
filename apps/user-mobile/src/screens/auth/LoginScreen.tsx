@@ -760,7 +760,6 @@ export default function LoginScreen() {
 
   const handleSignUp = () => {
     if (validateSignUpForm()) {
-      console.log("Sign up successful", formData);
       // TODO: Call API to register user after email verification
       navigation.replace("Main");
     }
@@ -782,7 +781,7 @@ export default function LoginScreen() {
           {/* HEADER */}
           <View style={styles.header}>
             <TouchableOpacity
-              onPress={() => console.log("Close")}
+              onPress={() => {}}
               style={styles.closeBtn}
             >
               <Ionicons name="close" size={24} color={COLORS.text} />

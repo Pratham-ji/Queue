@@ -1,18 +1,24 @@
 import { create } from "zustand";
 import { api } from "../services/api";
-import { io } from "socket.io-client";
+import { io, Socket } from "socket.io-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AppState, AppStateStatus } from "react-native";
 
-// 🔧 SOCKET SETUP
-// const SOCKET_URL = "http://192.168.31.69:5001"; // home ip
-const SOCKET_URL = "http://172.20.10.2:5001"; // phone
-
-const socket = io(SOCKET_URL, {
-  transports: ["websocket"],
-  autoConnect: false,
-});
+// Environment-driven Socket URL
+const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || "http://localhost:5001";
 
 const CLINIC_ID = "c86b8cc6-d4a3-4d30-acd6-98066ba616ee";
+
+// Socket singleton with aggressive reconnection
+let socket: Socket = io(SOCKET_URL, {
+  transports: ["websocket"],
+  autoConnect: false,
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  timeout: 10000,
+});
 
 interface UserQueueState {
   isLoading: boolean;
@@ -28,6 +34,7 @@ interface UserQueueState {
   initializeSocket: () => void;
   loadSession: () => Promise<void>;
   refreshData: () => Promise<void>;
+  setupAppStateListener: () => () => void;
 }
 
 export const useUserQueueStore = create<UserQueueState>((set, get) => ({
@@ -54,7 +61,7 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
         get().refreshData();
       }
     } catch (error) {
-      console.error("❌ Join Failed:", error);
+      if (__DEV__) console.error("Join Failed:", error);
     } finally {
       set({ isLoading: false });
     }
@@ -73,17 +80,24 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
     socket.disconnect();
   },
 
-  // 3. LISTEN TO LIVE UPDATES
+  // 3. LISTEN TO LIVE UPDATES (with reconnection handling)
   initializeSocket: () => {
     if (!socket.connected) {
       socket.connect();
       socket.emit("join_clinic", CLINIC_ID);
     }
 
+    // Re-join room on reconnect (critical for background recovery)
+    socket.off("reconnect");
+    socket.on("reconnect", () => {
+      if (__DEV__) console.log("Socket reconnected — re-syncing");
+      socket.emit("join_clinic", CLINIC_ID);
+      get().refreshData();
+    });
+
     // A. Queue List Update
     socket.off("queue_update");
     socket.on("queue_update", (updatedQueue: any[]) => {
-      console.log("⚡ Socket: Queue List Updated");
       set({ queue: updatedQueue });
 
       const { activeToken } = get();
@@ -97,13 +111,12 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
     // B. Current Patient Update
     socket.off("current_patient");
     socket.on("current_patient", (patient: any) => {
-      console.log("⚡ Socket: Now Serving #", patient.token);
       set({ currentServingToken: patient.token });
       get().refreshData(); // Force sync
     });
   },
 
-  // 4. FORCE REFRESH (Crucial Fix)
+  // 4. FORCE REFRESH
   refreshData: async () => {
     try {
       const res = await api.get(`/queue/${CLINIC_ID}`);
@@ -126,7 +139,7 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
         }
       }
     } catch (error) {
-      console.log("Silent refresh failed - Check Network/IP");
+      if (__DEV__) console.log("Silent refresh failed — Check Network/IP");
     }
   },
 
@@ -138,5 +151,25 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
       get().initializeSocket();
       get().refreshData();
     }
+  },
+
+  // 6. APP STATE LISTENER — reconnect socket when app foregrounds
+  setupAppStateListener: () => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (nextAppState === "active") {
+        const { queueStatus } = get();
+        if (queueStatus === "JOINED") {
+          // App came to foreground — reconnect if needed
+          if (!socket.connected) {
+            socket.connect();
+            socket.emit("join_clinic", CLINIC_ID);
+          }
+          get().refreshData();
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener("change", handleAppStateChange);
+    return () => subscription.remove();
   },
 }));

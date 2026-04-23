@@ -1,8 +1,6 @@
 import { Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../utils/prisma";
 import { AuthRequest } from "../middleware/auth.middleware";
-
-const prisma = new PrismaClient();
 
 // ==========================================
 // 1. REGISTER CLINIC (The "Zomato" Onboarding)
@@ -10,7 +8,7 @@ const prisma = new PrismaClient();
 export const registerClinic = async (req: AuthRequest, res: Response) => {
   try {
     const { name, address, city, image, description } = req.body;
-    const userId = req.user?.id; // Retrieved securely from Token
+    const userId = req.user?.userId; // Retrieved securely from Token
 
     // A. Validation
     if (!name || !address) {
@@ -49,7 +47,6 @@ export const registerClinic = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    console.log(`🏥 New Clinic Onboarded: ${name} by Provider ${userId}`);
 
     res.status(201).json({ success: true, data: newClinic });
   } catch (error: any) {
@@ -69,7 +66,7 @@ export const addDoctor = async (req: AuthRequest, res: Response) => {
       req.body;
 
     // A. Security Check: Does this Provider OWN this clinic?
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const isOwner = await prisma.clinic.findFirst({
       where: {
         id: clinicId,

@@ -1,8 +1,11 @@
 {
-  "dependencies": {
-    "express": "^5.2.1"
-  },
-  "devDependencies": {
-    "@types/node": "^25.0.10"
+  "name": "queue-pro-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Queue Pro — Real-time queue management system",
+  "scripts": {
+    "backend:dev": "cd apps/backend && npm run dev",
+    "backend:build": "cd apps/backend && npm run build",
+    "admin:dev": "cd apps/admin-web && npm run dev"
   }
 }

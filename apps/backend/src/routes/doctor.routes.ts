@@ -1,11 +1,10 @@
 import express from "express";
-import {Role} from "../role/role.enum";
-import {requireAuth , authorizeRoles} from "../middleware/auth.middleware";
+import { Role } from "../role/role.enum";
+import { requireAuth, authorizeRoles } from "../middleware/auth.middleware";
 
 const router = express.Router();
 
-export default router.post("/call-next",requireAuth,authorizeRoles(Role.PROVIDER),
+export default router.post("/call-next", requireAuth, authorizeRoles(Role.DOCTOR, Role.HOSPITAL_ADMIN),
 (req, res) => {
-    res.json({mesage:"Calling next Patient"});
+    res.json({ message: "Calling next Patient" });
 });
-

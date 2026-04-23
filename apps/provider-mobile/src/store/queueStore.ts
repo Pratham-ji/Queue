@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { api, socket } from "../services/api";
+import { AppState, AppStateStatus } from "react-native";
 
 // Types
 export interface Patient {
@@ -11,7 +12,7 @@ export interface Patient {
   arrivalTime: string;
 }
 
-// 🔑 YOUR REAL CLINIC ID
+// Your real clinic ID
 const CLINIC_ID = "c86b8cc6-d4a3-4d30-acd6-98066ba616ee";
 
 interface QueueState {
@@ -24,9 +25,9 @@ interface QueueState {
   toggleOnline: () => void;
   callNextPatient: () => Promise<void>;
   initializeSocket: () => void;
+  setupAppStateListener: () => () => void;
 }
 
-// ✅ EXPORT NAME MUST BE 'useQueueStore'
 export const useQueueStore = create<QueueState>((set, get) => ({
   currentPatient: null,
   queue: [],
@@ -40,7 +41,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
         set({ queue: res.data.data });
       }
     } catch (error) {
-      console.error("Failed to fetch queue:", error);
+      if (__DEV__) console.error("Failed to fetch queue:", error);
     }
   },
 
@@ -54,10 +55,8 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     if (newState) {
       if (!socket.connected) socket.connect();
       socket.emit("join_clinic", CLINIC_ID);
-      console.log("🟢 Socket Connected to Clinic:", CLINIC_ID);
     } else {
       socket.disconnect();
-      console.log("🔴 Socket Disconnected");
     }
   },
 
@@ -74,15 +73,49 @@ export const useQueueStore = create<QueueState>((set, get) => ({
 
       await api.post(`/queue/${CLINIC_ID}/next`);
     } catch (error) {
-      console.error("Call Next Failed:", error);
+      if (__DEV__) console.error("Call Next Failed:", error);
+      // Rollback — re-fetch on failure
+      get().fetchQueue();
     }
   },
 
-  // 4. LISTEN FOR LIVE UPDATES
+  // 4. LISTEN FOR LIVE UPDATES (with reconnection)
   initializeSocket: () => {
+    socket.off("queue_update");
     socket.on("queue_update", (updatedQueue: Patient[]) => {
-      console.log("⚡ Live Update Received");
       set({ queue: updatedQueue });
     });
+
+    socket.off("current_patient");
+    socket.on("current_patient", (patient: Patient) => {
+      set({ currentPatient: patient });
+    });
+
+    // Re-join room on reconnect
+    socket.off("reconnect");
+    socket.on("reconnect", () => {
+      if (__DEV__) console.log("Socket reconnected — re-syncing");
+      socket.emit("join_clinic", CLINIC_ID);
+      get().fetchQueue();
+    });
+  },
+
+  // 5. APP STATE LISTENER — reconnect when foregrounding
+  setupAppStateListener: () => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (nextAppState === "active") {
+        const { isOnline } = get();
+        if (isOnline) {
+          if (!socket.connected) {
+            socket.connect();
+            socket.emit("join_clinic", CLINIC_ID);
+          }
+          get().fetchQueue();
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener("change", handleAppStateChange);
+    return () => subscription.remove();
   },
 }));

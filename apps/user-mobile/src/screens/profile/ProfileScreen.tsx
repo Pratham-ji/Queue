@@ -79,7 +79,7 @@ export default function ProfileScreen() {
         setAppointments(res.data.data);
       }
     } catch (error) {
-      console.log("Error fetching history");
+      console.error("Error fetching history");
     } finally {
       setLoading(false);
     }

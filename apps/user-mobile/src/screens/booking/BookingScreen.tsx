@@ -68,7 +68,7 @@ export default function BookingScreen() {
   useEffect(() => {
     // In a real app, we might fetch this again or pass it all via params
     // For now, let's just use the ID to let the backend handle the booking
-    console.log("Booking for Doctor ID:", doctorId);
+    // Doctor ID available via route params
   }, [doctorId]);
 
   // 4. HANDLE BOOKING (THE FIX IS HERE)
@@ -93,7 +93,6 @@ export default function BookingScreen() {
         time: selectedTime,
       };
 
-      console.log("📡 Sending Payload:", payload);
 
       // C. Send Request
       const res = await api.post("/booking/create", payload);

@@ -1,11 +1,9 @@
 import axios from "axios";
-import { io } from "socket.io-client";
-import { Platform } from "react-native";
+import { io, Socket } from "socket.io-client";
 
-// 🔧 CONFIG: Use your real IP for BOTH Android and iOS
-// (Since you are on a Hotspot, localhost won't work on a physical iPhone)
-const BASE_URL = "http://172.20.10.2:5001";
-//const BASE_URL = "http://192.168.31.69:5001";
+// Environment-driven URLs — set in .env file
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5001";
+const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || "http://localhost:5001";
 
 // 1. HTTP CLIENT
 export const api = axios.create({
@@ -14,13 +12,40 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// 2. SOCKET CONNECTION
-export const socket = io(BASE_URL, {
+// 2. SOCKET CONNECTION (with aggressive reconnection)
+export const socket: Socket = io(SOCKET_URL, {
   autoConnect: false,
   transports: ["websocket"],
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  timeout: 10000,
 });
 
+// 3. Request logger (dev only)
 api.interceptors.request.use((request) => {
-  console.log("📡 API Request:", request.method?.toUpperCase(), request.url);
+  if (__DEV__) {
+    console.log("📡 API Request:", request.method?.toUpperCase(), request.url);
+  }
   return request;
 });
+
+// 4. Response interceptor — handle token expiry
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      try {
+        const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+        await AsyncStorage.removeItem("access_token");
+      } catch (_) {
+        // Storage cleanup failed — not critical
+      }
+    }
+    if (__DEV__) {
+      console.error("❌ API Error:", error.response?.data || error.message);
+    }
+    return Promise.reject(error);
+  },
+);

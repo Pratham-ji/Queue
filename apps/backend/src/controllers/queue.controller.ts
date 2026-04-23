@@ -1,8 +1,6 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../utils/prisma";
 import { AuthRequest } from "../middleware/auth.middleware";
-
-const prisma = new PrismaClient();
 
 // ==========================================
 // 1. GET QUEUE (Robust Version)
@@ -30,61 +28,65 @@ export const getQueue = async (req: Request, res: Response) => {
 
     res.status(200).json({ success: true, data: queue });
   } catch (error) {
-    console.error(error);
+    console.error("getQueue error:", error);
     res.status(500).json({ success: false, error: "Server Error" });
   }
 };
 
 // ==========================================
-// 2. CALL NEXT PATIENT (Triggers Auto-Refresh)
+// 2. CALL NEXT PATIENT — Transaction-protected
 // ==========================================
 export const callNextPatient = async (req: Request, res: Response) => {
   try {
     const clinicId = req.params.clinicId as string;
 
-    // 1. Find who is next
-    const nextPatient = await prisma.patient.findFirst({
-      where: {
-        clinicId: clinicId,
-        status: "WAITING",
-      },
-      orderBy: { token: "asc" },
+    // Use transaction to prevent race conditions when two admins click simultaneously
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Find who is next (lock the row via transaction)
+      const nextPatient = await tx.patient.findFirst({
+        where: {
+          clinicId: clinicId,
+          status: "WAITING",
+        },
+        orderBy: { token: "asc" },
+      });
+
+      if (!nextPatient) {
+        return null;
+      }
+
+      // 2. Update status to SERVING
+      const served = await tx.patient.update({
+        where: { id: nextPatient.id },
+        data: {
+          status: "SERVING",
+          servedTime: new Date(),
+        },
+      });
+
+      return served;
     });
 
-    if (!nextPatient) {
+    if (!result) {
       return res
         .status(400)
         .json({ success: false, message: "Queue is empty" });
     }
 
-    // 2. Update status to SERVING
-    const served = await prisma.patient.update({
-      where: { id: nextPatient.id },
-      data: {
-        status: "SERVING",
-        servedTime: new Date(),
-      },
-    });
-
-    // 3. BROADCAST TO ALL APPS (User & Doctor)
+    // 3. BROADCAST TO ALL APPS (outside transaction — fire-and-forget)
     const io = req.app.get("io");
 
-    // A. Send new Waiting List
     const remainingQueue = await prisma.patient.findMany({
       where: { clinicId: clinicId, status: "WAITING" },
       orderBy: { token: "asc" },
     });
 
-    // 📢 Event 1: Updates the list
     io.emit("queue_update", remainingQueue);
+    io.emit("current_patient", result);
 
-    // 📢 Event 2: Updates "Now Serving" dashboard
-    io.emit("current_patient", served);
-
-    console.log(`✅ Called Next: Token #${served.token}`);
-    res.status(200).json({ success: true, served });
+    res.status(200).json({ success: true, served: result });
   } catch (error: any) {
-    console.error("❌ Error calling next:", error.message || error);
+    console.error("Error calling next:", error.message || error);
     res.status(500).json({ success: false, error: "Error calling next" });
   }
 };
@@ -105,21 +107,22 @@ export const addPatient = async (req: Request, res: Response) => {
 
     if (!clinic) return res.status(404).json({ error: "Clinic not found" });
 
-    // Generate Token
-    const todayCount = await prisma.patient.count({
-      where: { clinicId: clinic.id },
-    });
-    const token = todayCount + 1;
+    // Generate Token (transaction to prevent duplicate tokens)
+    const newPatient = await prisma.$transaction(async (tx) => {
+      const todayCount = await tx.patient.count({
+        where: { clinicId: clinic.id },
+      });
+      const token = todayCount + 1;
 
-    // Create Patient
-    const newPatient = await prisma.patient.create({
-      data: {
-        name,
-        phone: phone || "",
-        token,
-        status: "WAITING",
-        clinicId: clinic.id,
-      },
+      return tx.patient.create({
+        data: {
+          name,
+          phone: phone || "",
+          token,
+          status: "WAITING",
+          clinicId: clinic.id,
+        },
+      });
     });
 
     // Notify Everyone
@@ -133,7 +136,7 @@ export const addPatient = async (req: Request, res: Response) => {
 
     res.status(201).json({ success: true, data: newPatient });
   } catch (error: any) {
-    console.error("❌ Error adding patient:", error.message || error);
+    console.error("Error adding patient:", error.message || error);
     res.status(500).json({ success: false, error: "Failed to add patient" });
   }
 };
@@ -161,21 +164,22 @@ export const joinQueue = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: "Clinic not found" });
     }
 
-    // Generate token
-    const todayCount = await prisma.patient.count({
-      where: { clinicId },
-    });
-    const token = todayCount + 1;
+    // Generate token (transaction for safety)
+    const newPatient = await prisma.$transaction(async (tx) => {
+      const todayCount = await tx.patient.count({
+        where: { clinicId },
+      });
+      const token = todayCount + 1;
 
-    // Create patient
-    const newPatient = await prisma.patient.create({
-      data: {
-        name,
-        phone: phone || "",
-        token,
-        status: "WAITING",
-        clinicId,
-      },
+      return tx.patient.create({
+        data: {
+          name,
+          phone: phone || "",
+          token,
+          status: "WAITING",
+          clinicId,
+        },
+      });
     });
 
     // Emit real-time update
@@ -197,7 +201,7 @@ export const joinQueue = async (req: AuthRequest, res: Response) => {
 // CREATE QUEUE - Provider creates a new clinic/queue
 export const createQueue = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, address } = req.body;
+    const { name, address, city, image } = req.body;
     const userId = req.user?.userId;
 
     if (!name) {
@@ -208,21 +212,25 @@ export const createQueue = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    // Check if user already owns a clinic
-    const existingClinic = await prisma.clinic.findUnique({
-      where: { ownerId: userId },
+    // Check if user already owns a clinic (via users relation)
+    const existingClinic = await prisma.clinic.findFirst({
+      where: { users: { some: { id: userId } } },
     });
 
     if (existingClinic) {
       return res.status(400).json({ error: "You already own a clinic" });
     }
 
-    // Create new clinic
+    // Create new clinic and link to user
     const newClinic = await prisma.clinic.create({
       data: {
         name,
         address: address || "",
-        ownerId: userId,
+        city: city || "Dehradun",
+        image: image || "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80",
+        users: {
+          connect: { id: userId },
+        },
       },
     });
 
@@ -232,6 +240,7 @@ export const createQueue = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ success: false, error: "Failed to create queue" });
   }
 };
+
 
 // DELETE QUEUE - Admin deletes a queue/patient record
 export const deleteQueue = async (req: AuthRequest, res: Response) => {

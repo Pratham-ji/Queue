@@ -119,7 +119,7 @@ export default function OTPVerificationScreen({ route }: any) {
       // For signup flow, pass the signUpData along
       if (source === "signup" && signUpData) {
         // You can call your API here with signUpData and OTP
-        console.log("Sign up data with OTP verification:", signUpData, otp.join(""));
+        // OTP verified — proceed with signup
       }
       
       navigation.replace("Main");
@@ -134,7 +134,7 @@ export default function OTPVerificationScreen({ route }: any) {
     setOtp(["", "", "", "", "", ""]);
     setError("");
     inputRefs.current[0]?.focus();
-    console.log("Resend OTP to", phoneNumber);
+    // Resend OTP logic here
   };
 
   // Handle go back

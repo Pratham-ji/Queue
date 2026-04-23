@@ -1,14 +1,11 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "../utils/prisma";
 
 // ==========================================
 // CREATE APPOINTMENT
 // ==========================================
 export const createAppointment = async (req: Request, res: Response) => {
   try {
-    // ⚠️ UPDATE: We now expect doctorId instead of clinicId
     const { doctorId, patientName, date, time } = req.body;
 
     if (!doctorId || !patientName || !date || !time) {
@@ -18,10 +15,10 @@ export const createAppointment = async (req: Request, res: Response) => {
       });
     }
 
-    // 1. Create Booking linked to the Doctor
+    // Create Booking linked to the Doctor
     const newAppointment = await prisma.appointment.create({
       data: {
-        doctorId, // Link to the specific doctor
+        doctorId,
         patientName,
         date,
         time,
@@ -29,16 +26,12 @@ export const createAppointment = async (req: Request, res: Response) => {
       },
     });
 
-    console.log(
-      `✅ New Booking: ${patientName} with Doctor ${doctorId} on ${date}`,
-    );
-
     res.status(201).json({
       success: true,
       data: newAppointment,
     });
   } catch (error: any) {
-    console.error("❌ Booking Error:", error.message);
+    console.error("Booking Error:", error.message);
     res
       .status(500)
       .json({ success: false, error: "Failed to book appointment" });
@@ -65,11 +58,10 @@ export const getMyAppointments = async (req: Request, res: Response) => {
       orderBy: {
         createdAt: "desc",
       },
-      // ⚠️ UPDATE: Fetch Doctor AND their Clinic
       include: {
         doctor: {
           include: {
-            clinic: true, // Get the hospital details via the doctor
+            clinic: true,
           },
         },
       },
@@ -77,7 +69,7 @@ export const getMyAppointments = async (req: Request, res: Response) => {
 
     res.status(200).json({ success: true, data: appointments });
   } catch (error: any) {
-    console.error("❌ Fetch Error:", error.message);
+    console.error("Fetch Error:", error.message);
     res
       .status(500)
       .json({ success: false, error: "Failed to fetch appointments" });

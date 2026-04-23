@@ -98,4 +98,11 @@ export const checkHospitalScope = (
   }
 
   next();
-}
+};
+
+// Export aliases for backward compatibility
+export const protect = requireAuth;
+
+export const authorize = (...allowedRoles: any[]) => {
+  return authorizeRoles(...allowedRoles);
+};

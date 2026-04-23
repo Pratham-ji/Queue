@@ -27,6 +27,7 @@ model User {
   // Relations...
   clinicId       String?
   clinic         Clinic?        @relation("ClinicToUser", fields: [clinicId], references: [id])
+  ownedClinics   Clinic[]       @relation("ClinicOwner")
   doctorProfile  DoctorProfile?
   appointments   Appointment[]
 }
@@ -37,7 +38,7 @@ model Clinic {
   name        String
   address     String
   city        String   @default("Dehradun")
-  image       String
+  image       String   @default("")
   rating      Float    @default(4.5)
   description String?
   verified    Boolean  @default(false)
@@ -47,6 +48,10 @@ model Clinic {
   // ----------------
 
   createdAt   DateTime @default(now())
+
+  // Owner relationship
+  ownerId     String?  @unique
+  owner       User?    @relation("ClinicOwner", fields: [ownerId], references: [id])
 
   // Relations...
   users       User[]   @relation("ClinicToUser")

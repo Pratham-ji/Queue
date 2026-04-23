@@ -15,7 +15,6 @@ import otpRoutes from "./auth/otp.routes";
 import uploadRoutes from "./routes/upload.routes";
 import queueRoutes from "./routes/queue.routes";
 import authRoutes from "./routes/auth.routes";
-import hospitalRoutes from "./routes/hospital.routes";
 import adminRoutes from "./routes/admin.routes";
 import providerRoutes from "./routes/provider.routes";
 import doctorRoutes from "./routes/doctor.routes";

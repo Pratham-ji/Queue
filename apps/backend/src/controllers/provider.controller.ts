@@ -41,8 +41,9 @@ export const registerClinic = async (req: AuthRequest, res: Response) => {
           "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80",
         description,
         rating: 4.5, // New clinics start with a default rating or 0
+        ownerId: userId, // 🔗 THE SECURITY LINK: This user owns this clinic
         users: {
-          connect: { id: userId }, // 🔗 THE SECURITY LINK: This user owns this clinic
+          connect: { id: userId }, // Link user as clinic staff
         },
       },
     });
@@ -70,7 +71,7 @@ export const addDoctor = async (req: AuthRequest, res: Response) => {
     const isOwner = await prisma.clinic.findFirst({
       where: {
         id: clinicId,
-        users: { some: { id: userId } },
+        ownerId: userId,
       },
     });
 

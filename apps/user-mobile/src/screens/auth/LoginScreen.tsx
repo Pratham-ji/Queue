@@ -758,10 +758,30 @@ export default function LoginScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     if (validateSignUpForm()) {
-      // TODO: Call API to register user after email verification
-      navigation.replace("Main");
+      try {
+        const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+        const { api } = require("../../services/api");
+
+        const res = await api.post("/auth/signup", {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          phone: formData.phoneNumber,
+          role: "PATIENT",
+        });
+
+        if (res.data.success) {
+          const { accessToken, user } = res.data.data;
+          await AsyncStorage.setItem("access_token", accessToken);
+          await AsyncStorage.setItem("user_data", JSON.stringify(user));
+          navigation.replace("Main");
+        }
+      } catch (error: any) {
+        const msg = error.response?.data?.error || "Signup failed";
+        setErrors({ general: msg });
+      }
     }
   };
 

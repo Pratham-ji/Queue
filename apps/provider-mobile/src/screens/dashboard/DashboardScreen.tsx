@@ -18,11 +18,11 @@ import { useQueueStore } from "../../store/queueStore";
 import { COLORS } from "../../theme";
 
 // --- MINIMAL HEADER ---
-const DashboardHeader = ({ navigation, isOnline, toggleOnline }: any) => (
+const DashboardHeader = ({ navigation, isOnline, toggleOnline, greeting, userName }: any) => (
   <View style={styles.header}>
     <View>
-      <Text style={styles.greeting}>GOOD MORNING,</Text>
-      <Text style={styles.docName}>Dr. Trafalgar Law</Text>
+      <Text style={styles.greeting}>{greeting}</Text>
+      <Text style={styles.docName}>{userName}</Text>
     </View>
 
     <View style={styles.headerRight}>
@@ -66,8 +66,35 @@ const DashboardHeader = ({ navigation, isOnline, toggleOnline }: any) => (
 );
 
 export default function DashboardScreen({ navigation }: any) {
-  const { currentPatient, isOnline, toggleOnline, callNextPatient, queue } =
+  const { currentPatient, isOnline, toggleOnline, callNextPatient, queue, fetchMyClinics, fetchQueue, activeClinic } =
     useQueueStore();
+  const [userName, setUserName] = React.useState("Doctor");
+
+  // Fetch real user data + clinics on mount
+  React.useEffect(() => {
+    const loadData = async () => {
+      try {
+        const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+        const userData = await AsyncStorage.getItem("user_data");
+        if (userData) {
+          const user = JSON.parse(userData);
+          setUserName(user.name || "Doctor");
+        }
+        await fetchMyClinics();
+        await fetchQueue();
+      } catch (e) {
+        if (__DEV__) console.error("Dashboard load error:", e);
+      }
+    };
+    loadData();
+  }, []);
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "GOOD MORNING,";
+    if (hour < 17) return "GOOD AFTERNOON,";
+    return "GOOD EVENING,";
+  };
 
   const handleBroadcast = () => {
     Alert.alert(
@@ -95,6 +122,8 @@ export default function DashboardScreen({ navigation }: any) {
         navigation={navigation}
         isOnline={isOnline}
         toggleOnline={toggleOnline}
+        greeting={getGreeting()}
+        userName={userName}
       />
 
       <ScrollView

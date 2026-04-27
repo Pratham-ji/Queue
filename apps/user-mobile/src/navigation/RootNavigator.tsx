@@ -15,7 +15,7 @@ export type RootStackParamList = {
   OTPVerification: { phoneNumber: string };
   Main: undefined;
   HospitalDetails: { id: string };
-  Queue: undefined;
+  Queue: { clinicId?: string; clinicName?: string } | undefined;
   Booking: { doctorId: string }; // ✅ ADD THIS
   
   CustomSession: { session: any; role: string; participant?: any };

@@ -31,14 +31,41 @@ export default function LoginScreen({ navigation }: any) {
   const [showPass, setShowPass] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    if (!email || !password) return;
     setIsLoading(true);
-    // Simulate a smooth "Network Request" delay without lagging the UI
-    setTimeout(() => {
+    setErrorMsg("");
+
+    try {
+      const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+      const { api } = require("../../services/api");
+
+      const res = await api.post("/auth/login", { email, password });
+
+      if (res.data.success) {
+        const { accessToken, user } = res.data.data;
+
+        // Verify role is PROVIDER or ADMIN
+        if (user.role !== "PROVIDER" && user.role !== "ADMIN") {
+          setErrorMsg("Access denied. This app is for providers only.");
+          setIsLoading(false);
+          return;
+        }
+
+        // Store token and user data
+        await AsyncStorage.setItem("access_token", accessToken);
+        await AsyncStorage.setItem("user_data", JSON.stringify(user));
+
+        navigation.replace("Dashboard");
+      }
+    } catch (error: any) {
+      const msg = error.response?.data?.error || "Login failed. Check your credentials.";
+      setErrorMsg(msg);
+    } finally {
       setIsLoading(false);
-      navigation.replace("Dashboard");
-    }, 800);
+    }
   };
 
   return (
@@ -56,6 +83,11 @@ export default function LoginScreen({ navigation }: any) {
             </View>
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Sign in to manage your queue</Text>
+            {errorMsg ? (
+              <View style={{ backgroundColor: '#FEE2E2', padding: 10, borderRadius: 10, marginTop: 12, width: '100%' }}>
+                <Text style={{ color: '#DC2626', fontSize: 13, textAlign: 'center', fontWeight: '600' }}>{errorMsg}</Text>
+              </View>
+            ) : null}
           </View>
 
           {/* FORM - Animates ONCE on mount */}

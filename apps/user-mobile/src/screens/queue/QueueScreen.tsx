@@ -33,26 +33,37 @@ const COLORS = {
   error: "#EF4444",
 };
 
-export default function QueueScreen() {
+export default function QueueScreen({ route }: any) {
   const navigation = useNavigation();
   const [name, setName] = useState("");
   const {
     joinQueue,
     leaveQueue,
     activeToken,
+    activeClinicId,
+    setClinic,
     peopleAhead,
     queueStatus,
     isLoading,
     refreshData,
+    loadSession,
     estimatedWait,
     currentServingToken,
   } = useUserQueueStore();
 
-  // 🔄 AUTO-SYNC: Fetch data when screen comes into focus
+  // Accept clinicId from navigation params (from HospitalDetails)
+  const routeClinicId = route?.params?.clinicId;
+  const clinicName = route?.params?.clinicName || "Clinic";
+
+  // 🔄 Set clinic from navigation params + restore session
   useFocusEffect(
     useCallback(() => {
+      if (routeClinicId) {
+        setClinic(routeClinicId);
+      }
+      loadSession();
       refreshData();
-    }, []),
+    }, [routeClinicId]),
   );
 
   return (
@@ -98,8 +109,8 @@ export default function QueueScreen() {
               <Ionicons name="medkit" size={24} color={COLORS.primary} />
             </View>
             <View>
-              <Text style={styles.docName}>Dr. Trafalgar Law</Text>
-              <Text style={styles.docSub}>Heart & Surgery Clinic</Text>
+              <Text style={styles.docName}>{clinicName}</Text>
+              <Text style={styles.docSub}>{activeClinicId ? "Queue Active" : "Select a clinic to join"}</Text>
             </View>
           </View>
           <View style={styles.statusPill}>
@@ -107,7 +118,7 @@ export default function QueueScreen() {
             <Text style={styles.statusText}>
               {currentServingToken
                 ? `Serving Token #${currentServingToken}`
-                : "Clinic is Live"}
+                : activeClinicId ? "Clinic is Live" : "No Clinic Selected"}
             </Text>
           </View>
         </View>

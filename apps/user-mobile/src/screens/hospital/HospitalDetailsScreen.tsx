@@ -125,6 +125,18 @@ export default function HospitalDetailsScreen() {
         </View>
       </ScrollView>
 
+      {/* Floating Join Queue Button */}
+      <View style={styles.floatingBtnContainer}>
+        <TouchableOpacity
+          style={styles.joinQueueBtn}
+          onPress={() => navigation.navigate("Queue", { clinicId: id, clinicName: hospital.name })}
+          activeOpacity={0.9}
+        >
+          <Ionicons name="people" size={20} color="#FFF" />
+          <Text style={styles.joinQueueText}>Join Queue</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Floating Back Button */}
       <TouchableOpacity
         style={styles.backButton}
@@ -257,4 +269,27 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   bookBtnText: { color: "#FFF", fontWeight: "700", fontSize: 12 },
+
+  // Floating Join Queue Button
+  floatingBtnContainer: {
+    position: "absolute",
+    bottom: 30,
+    left: 24,
+    right: 24,
+  },
+  joinQueueBtn: {
+    backgroundColor: COLORS.primary,
+    height: 56,
+    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  joinQueueText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
 });

@@ -13,8 +13,17 @@ export const api = axios.create({
   },
 });
 
-// 2. Request interceptor (silent in production)
-api.interceptors.request.use((request) => {
+// 2. Request interceptor — inject auth token + log
+api.interceptors.request.use(async (request) => {
+  try {
+    const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+    const token = await AsyncStorage.getItem("access_token");
+    if (token) {
+      request.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch (_) {
+    // Storage read failed — proceed without token
+  }
   if (__DEV__) {
     console.log(
       "📡 User App Request:",

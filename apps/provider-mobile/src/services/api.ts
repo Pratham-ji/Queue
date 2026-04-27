@@ -23,8 +23,17 @@ export const socket: Socket = io(SOCKET_URL, {
   timeout: 10000,
 });
 
-// 3. Request logger (dev only)
-api.interceptors.request.use((request) => {
+// 3. Request logger + auth token injection
+api.interceptors.request.use(async (request) => {
+  try {
+    const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+    const token = await AsyncStorage.getItem("access_token");
+    if (token) {
+      request.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch (_) {
+    // Storage read failed — proceed without token
+  }
   if (__DEV__) {
     console.log("📡 API Request:", request.method?.toUpperCase(), request.url);
   }

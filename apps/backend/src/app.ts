@@ -19,6 +19,7 @@ import hospitalRoutes from "./routes/hospital.routes";
 import adminRoutes from "./routes/admin.routes";
 import providerRoutes from "./routes/provider.routes";
 import doctorRoutes from "./routes/doctor.routes";
+import marketplaceRoutes from "./routes/marketplace.routes";
 
 // Controller imports for inline routes
 import {
@@ -103,6 +104,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/queue", queueRoutes);
 app.use("/api/hospital", hospitalRoutes);
 app.use("/api/provider", providerRoutes);
+app.use("/api/provider", marketplaceRoutes);  // M:N marketplace endpoints
 app.use("/api/admin", adminRoutes);
 app.use("/api/upload", uploadRoutes);
 

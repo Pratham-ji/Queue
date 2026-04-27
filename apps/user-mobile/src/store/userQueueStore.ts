@@ -7,8 +7,6 @@ import { AppState, AppStateStatus } from "react-native";
 // Environment-driven Socket URL
 const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || "http://localhost:5001";
 
-const CLINIC_ID = "c86b8cc6-d4a3-4d30-acd6-98066ba616ee";
-
 // Socket singleton with aggressive reconnection
 let socket: Socket = io(SOCKET_URL, {
   transports: ["websocket"],
@@ -23,12 +21,14 @@ let socket: Socket = io(SOCKET_URL, {
 interface UserQueueState {
   isLoading: boolean;
   activeToken: number | null;
+  activeClinicId: string | null;   // Dynamic — set when user picks a clinic
   queueStatus: "IDLE" | "JOINED";
   queue: any[];
   peopleAhead: number;
   currentServingToken: number | null;
   estimatedWait: number; // In minutes
 
+  setClinic: (clinicId: string) => void;
   joinQueue: (name: string, phone: string) => Promise<void>;
   leaveQueue: () => Promise<void>;
   initializeSocket: () => void;
@@ -40,23 +40,32 @@ interface UserQueueState {
 export const useUserQueueStore = create<UserQueueState>((set, get) => ({
   isLoading: false,
   activeToken: null,
+  activeClinicId: null,
   queueStatus: "IDLE",
   queue: [],
   peopleAhead: 0,
   currentServingToken: null,
   estimatedWait: 0,
 
-  // 1. JOIN QUEUE
+  // 0. SET CLINIC (called from navigation — user picks a clinic)
+  setClinic: (clinicId: string) => {
+    set({ activeClinicId: clinicId });
+  },
+
+  // 1. JOIN QUEUE (uses dynamic clinicId)
   joinQueue: async (name, phone) => {
-    if (!name) return;
+    const { activeClinicId } = get();
+    if (!name || !activeClinicId) return;
+
     set({ isLoading: true });
     try {
-      const res = await api.post(`/queue/${CLINIC_ID}/add`, { name, phone });
+      const res = await api.post(`/queue/${activeClinicId}/add`, { name, phone });
 
       if (res.data.success) {
         const token = res.data.data.token;
         set({ activeToken: token, queueStatus: "JOINED" });
         await AsyncStorage.setItem("user_token", token.toString());
+        await AsyncStorage.setItem("user_clinic_id", activeClinicId);
         get().initializeSocket();
         get().refreshData();
       }
@@ -77,21 +86,28 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
       currentServingToken: null,
     });
     await AsyncStorage.removeItem("user_token");
+    await AsyncStorage.removeItem("user_clinic_id");
     socket.disconnect();
   },
 
   // 3. LISTEN TO LIVE UPDATES (with reconnection handling)
   initializeSocket: () => {
+    const { activeClinicId } = get();
+    if (!activeClinicId) return;
+
     if (!socket.connected) {
       socket.connect();
-      socket.emit("join_clinic", CLINIC_ID);
+      socket.emit("join_clinic", activeClinicId);
     }
 
     // Re-join room on reconnect (critical for background recovery)
     socket.off("reconnect");
     socket.on("reconnect", () => {
       if (__DEV__) console.log("Socket reconnected — re-syncing");
-      socket.emit("join_clinic", CLINIC_ID);
+      const { activeClinicId: currentClinic } = get();
+      if (currentClinic) {
+        socket.emit("join_clinic", currentClinic);
+      }
       get().refreshData();
     });
 
@@ -116,10 +132,13 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
     });
   },
 
-  // 4. FORCE REFRESH
+  // 4. FORCE REFRESH (uses dynamic clinicId)
   refreshData: async () => {
     try {
-      const res = await api.get(`/queue/${CLINIC_ID}`);
+      const { activeClinicId } = get();
+      if (!activeClinicId) return;
+
+      const res = await api.get(`/queue/${activeClinicId}`);
 
       if (res.data.success) {
         const list = res.data.data; // Waiting List
@@ -143,11 +162,17 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
     }
   },
 
-  // 5. RESTORE SESSION
+  // 5. RESTORE SESSION (loads clinicId + token from storage)
   loadSession: async () => {
     const savedToken = await AsyncStorage.getItem("user_token");
-    if (savedToken) {
-      set({ activeToken: parseInt(savedToken), queueStatus: "JOINED" });
+    const savedClinicId = await AsyncStorage.getItem("user_clinic_id");
+
+    if (savedToken && savedClinicId) {
+      set({
+        activeToken: parseInt(savedToken),
+        activeClinicId: savedClinicId,
+        queueStatus: "JOINED",
+      });
       get().initializeSocket();
       get().refreshData();
     }
@@ -157,12 +182,12 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
   setupAppStateListener: () => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (nextAppState === "active") {
-        const { queueStatus } = get();
-        if (queueStatus === "JOINED") {
+        const { queueStatus, activeClinicId } = get();
+        if (queueStatus === "JOINED" && activeClinicId) {
           // App came to foreground — reconnect if needed
           if (!socket.connected) {
             socket.connect();
-            socket.emit("join_clinic", CLINIC_ID);
+            socket.emit("join_clinic", activeClinicId);
           }
           get().refreshData();
         }

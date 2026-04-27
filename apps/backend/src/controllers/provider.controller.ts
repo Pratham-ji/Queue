@@ -40,14 +40,21 @@ export const registerClinic = async (req: AuthRequest, res: Response) => {
           image ||
           "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80",
         description,
-        rating: 4.5, // New clinics start with a default rating or 0
-        ownerId: userId, // 🔗 THE SECURITY LINK: This user owns this clinic
+        rating: 4.5,
+        ownerId: userId,
         users: {
-          connect: { id: userId }, // Link user as clinic staff
+          connect: { id: userId },
+        },
+        // M:N marketplace membership — owner record
+        members: {
+          create: {
+            userId: userId!,
+            role: "OWNER",
+            isPrimary: true,
+          },
         },
       },
     });
-
 
     res.status(201).json({ success: true, data: newClinic });
   } catch (error: any) {

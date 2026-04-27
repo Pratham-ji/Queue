@@ -212,8 +212,8 @@ export const createQueue = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    // Check if user already owns a clinic (ownerId is @unique)
-    const existingClinic = await prisma.clinic.findUnique({
+    // Check if user already owns a clinic
+    const existingClinic = await prisma.clinic.findFirst({
       where: { ownerId: userId },
     });
 
@@ -221,7 +221,7 @@ export const createQueue = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: "You already own a clinic" });
     }
 
-    // Create new clinic
+    // Create new clinic with M:N membership
     const newClinic = await prisma.clinic.create({
       data: {
         name,
@@ -229,6 +229,13 @@ export const createQueue = async (req: AuthRequest, res: Response) => {
         city: city || "Dehradun",
         image: image || "",
         ownerId: userId,
+        members: {
+          create: {
+            userId,
+            role: "OWNER",
+            isPrimary: true,
+          },
+        },
       },
     });
 

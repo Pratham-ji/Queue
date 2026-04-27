@@ -16,14 +16,15 @@ export default function Login() {
     try {
       // 1. Send Login Request
       // Note: We'll fix the URL to point to your AWS server later
-      const res = await axios.post("http://13.127.107.44:5001/api/auth/login", {
+      const res = await axios.post("http://13.201.105.170:5001/api/auth/login", {
         email,
         password,
       });
 
-      // 2. Save the Token (The Key to the Kingdom)
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+      // 2. Save the Token (backend returns { data: { accessToken, user } })
+      const { accessToken, user } = res.data.data;
+      localStorage.setItem("token", accessToken);
+      localStorage.setItem("user", JSON.stringify(user));
 
       // 3. Redirect (We will handle this next)
       alert("Login Successful! Welcome, Admin.");

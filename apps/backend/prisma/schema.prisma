@@ -30,6 +30,9 @@ model User {
   ownedClinics   Clinic[]       @relation("ClinicOwner")
   doctorProfile  DoctorProfile?
   appointments   Appointment[]
+
+  // M:N clinic memberships (marketplace model)
+  clinicMemberships ClinicMember[]
 }
 
 // 2. THE CLINIC
@@ -49,14 +52,17 @@ model Clinic {
 
   createdAt   DateTime @default(now())
 
-  // Owner relationship
-  ownerId     String?  @unique
+  // Owner relationship (not unique — provider can own multiple clinics)
+  ownerId     String?
   owner       User?    @relation("ClinicOwner", fields: [ownerId], references: [id])
 
   // Relations...
   users       User[]   @relation("ClinicToUser")
   doctors     DoctorProfile[]
   patients    Patient[]
+
+  // M:N provider memberships (marketplace model)
+  members     ClinicMember[]
 }
 
 // 3. THE PATIENT (Queue Items - Walk-ins)
@@ -163,4 +169,29 @@ enum QueueStatus {
   SERVING
   COMPLETED
   MISSED
+}
+
+// --- M:N MARKETPLACE MODEL ---
+
+// Junction table: which users work at which clinics, and in what role
+model ClinicMember {
+  id        String     @id @default(uuid())
+  role      ClinicRole @default(STAFF)
+  isPrimary Boolean    @default(false)  // user's "active" clinic for this session
+  joinedAt  DateTime   @default(now())
+
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  clinicId  String
+  clinic    Clinic     @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clinicId])  // prevent duplicate memberships
+}
+
+enum ClinicRole {
+  OWNER
+  DOCTOR
+  STAFF
+  PHARMACIST
 }

@@ -81,7 +81,7 @@ export const joinSession = async (req: Request, res: Response) => {
 // 3. GET DETAILS
 export const getSessionDetails = async (req: Request, res: Response) => {
   try {
-    const { sessionId } = req.params;
+    const sessionId = req.params.sessionId as string;
     const session = await prisma.customSession.findUnique({
       where: { id: sessionId },
       include: { participants: { orderBy: { token: "asc" } } },

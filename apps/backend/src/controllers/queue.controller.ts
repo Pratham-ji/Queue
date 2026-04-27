@@ -212,25 +212,23 @@ export const createQueue = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    // Check if user already owns a clinic (via users relation)
-    const existingClinic = await prisma.clinic.findFirst({
-      where: { users: { some: { id: userId } } },
+    // Check if user already owns a clinic (ownerId is @unique)
+    const existingClinic = await prisma.clinic.findUnique({
+      where: { ownerId: userId },
     });
 
     if (existingClinic) {
       return res.status(400).json({ error: "You already own a clinic" });
     }
 
-    // Create new clinic and link to user
+    // Create new clinic
     const newClinic = await prisma.clinic.create({
       data: {
         name,
         address: address || "",
         city: city || "Dehradun",
-        image: image || "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80",
-        users: {
-          connect: { id: userId },
-        },
+        image: image || "",
+        ownerId: userId,
       },
     });
 

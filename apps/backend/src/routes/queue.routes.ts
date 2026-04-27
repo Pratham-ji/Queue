@@ -31,7 +31,7 @@ router.post("/join", requireAuth, joinQueue);
 router.post(
   "/create",
   requireAuth,
-  requireRole(["HOSPITAL_ADMIN"]),
+  requireRole(["PROVIDER"]),
   createQueue
 );
 
@@ -39,7 +39,7 @@ router.post(
 router.delete(
   "/:id",
   requireAuth,
-  requireRole(["SUPER_ADMIN"]),
+  requireRole(["ADMIN"]),
   deleteQueue
 );
 

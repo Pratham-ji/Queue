@@ -14,11 +14,8 @@ export const signup = async (req: Request, res: Response) => {
     // Map the incoming string to the VALID Prisma Enum
     let assignedRole: Role = Role.PATIENT; // Default
 
-    // Frontend sends "PROVIDER" → map to HOSPITAL_ADMIN
-    if (role === "PROVIDER") assignedRole = Role.HOSPITAL_ADMIN;
-    // Frontend sends "ADMIN" → map to SUPER_ADMIN
-    else if (role === "ADMIN") assignedRole = Role.SUPER_ADMIN;
-    // Otherwise check if the role string matches any valid enum value
+    if (role === "PROVIDER") assignedRole = Role.PROVIDER;
+    else if (role === "ADMIN") assignedRole = Role.ADMIN;
     else if (Object.values(Role).includes(role as Role)) {
       assignedRole = role as Role;
     }

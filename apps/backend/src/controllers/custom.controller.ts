@@ -4,7 +4,7 @@ import { prisma } from "../utils/prisma";
 // 1. CREATE SESSION
 export const createSession = async (req: Request, res: Response) => {
   try {
-    const { hostName, title, hostId } = req.body;
+    const { hostName, title } = req.body;
 
     const joinCode = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -13,8 +13,7 @@ export const createSession = async (req: Request, res: Response) => {
         hostName: hostName || "Host",
         title: title || "New Session",
         joinCode,
-        hostId: hostId || "guest_host_id",
-        status: "ACTIVE",
+        isActive: true,
       },
     });
 
@@ -44,7 +43,7 @@ export const joinSession = async (req: Request, res: Response) => {
         .json({ success: false, error: "Session not found" });
     }
 
-    if (session.status !== "ACTIVE") {
+    if (!session.isActive) {
       return res
         .status(400)
         .json({ success: false, error: "Session has ended" });
@@ -52,14 +51,14 @@ export const joinSession = async (req: Request, res: Response) => {
 
     // Token generation inside transaction for safety
     const participant = await prisma.$transaction(async (tx) => {
-      const lastParticipant = await tx.customParticipant.findFirst({
+      const lastParticipant = await tx.sessionParticipant.findFirst({
         where: { sessionId: session.id },
         orderBy: { token: "desc" },
       });
 
       const nextToken = lastParticipant ? lastParticipant.token + 1 : 1;
 
-      return tx.customParticipant.create({
+      return tx.sessionParticipant.create({
         data: {
           name,
           token: nextToken,
@@ -103,13 +102,13 @@ export const callNext = async (req: Request, res: Response) => {
 
     const updatedPerson = await prisma.$transaction(async (tx) => {
       // A. Mark current serving as COMPLETED
-      await tx.customParticipant.updateMany({
+      await tx.sessionParticipant.updateMany({
         where: { sessionId, status: "SERVING" },
         data: { status: "COMPLETED" },
       });
 
       // B. Find next WAITING person (locked by transaction)
-      const nextPerson = await tx.customParticipant.findFirst({
+      const nextPerson = await tx.sessionParticipant.findFirst({
         where: { sessionId, status: "WAITING" },
         orderBy: { token: "asc" },
       });
@@ -119,7 +118,7 @@ export const callNext = async (req: Request, res: Response) => {
       }
 
       // C. Mark new person as SERVING
-      return tx.customParticipant.update({
+      return tx.sessionParticipant.update({
         where: { id: nextPerson.id },
         data: { status: "SERVING" },
       });
@@ -132,7 +131,7 @@ export const callNext = async (req: Request, res: Response) => {
     const io = req.app.get("io");
 
     // Broadcast list update
-    const allParticipants = await prisma.customParticipant.findMany({
+    const allParticipants = await prisma.sessionParticipant.findMany({
       where: { sessionId },
       orderBy: { token: "asc" },
     });

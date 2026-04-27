@@ -9,9 +9,9 @@ import { requireRole } from "../middleware/role.middleware";
 const router = express.Router();
 
 // requireAuth = Must be logged in
-// requireRole(["SUPER_ADMIN"]) = Must have role: "ADMIN" in database
+// requireRole(["ADMIN"]) = Must have role: "ADMIN" in database
 
-router.get("/pending", requireAuth, requireRole(["SUPER_ADMIN"]), getPendingClinics);
-router.patch("/approve/:clinicId", requireAuth, requireRole(["SUPER_ADMIN"]), approveClinic);
+router.get("/pending", requireAuth, requireRole(["ADMIN"]), getPendingClinics);
+router.patch("/approve/:clinicId", requireAuth, requireRole(["ADMIN"]), approveClinic);
 
 export default router;

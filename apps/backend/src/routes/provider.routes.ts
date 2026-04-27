@@ -9,11 +9,11 @@ const router = express.Router();
 router.post(
   "/register-clinic",
   requireAuth,
-  requireRole(["HOSPITAL_ADMIN", "SUPER_ADMIN"]),
+  requireRole(["PROVIDER", "ADMIN"]),
   registerClinic,
 );
 
 // 2. Add Doctor to Clinic
-router.post("/add-doctor", requireAuth, requireRole(["HOSPITAL_ADMIN", "SUPER_ADMIN"]), addDoctor);
+router.post("/add-doctor", requireAuth, requireRole(["PROVIDER", "ADMIN"]), addDoctor);
 
 export default router;

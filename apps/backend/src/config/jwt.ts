@@ -10,7 +10,7 @@ export const jwtConfig = {
 
 export interface JwtPayload {
   userId: string;
-  role: "USER" | "PROVIDER" | "ADMIN";
+  role: "PATIENT" | "PROVIDER" | "ADMIN" | "STAFF";
 }
 
 export function verifyToken(token: string): JwtPayload {

@@ -110,11 +110,17 @@ app.use("/api/upload", uploadRoutes);
 app.post("/api/booking/create", createAppointment);
 app.get("/api/booking/my-appointments", getMyAppointments);
 
-// Custom Session (inline routes)
+// Custom Session (inline routes — /session/ and /custom/ aliases)
 app.post("/api/session/create", createSession);
 app.post("/api/session/join", joinSession);
 app.get("/api/session/:sessionId", getSessionDetails);
 app.post("/api/session/call-next", callNext);
+
+// Mobile app uses /custom/ prefix — alias to same handlers
+app.post("/api/custom/create", createSession);
+app.post("/api/custom/join", joinSession);
+app.get("/api/custom/:sessionId", getSessionDetails);
+app.post("/api/custom/next", callNext);
 
 // Role-based routes
 app.use("/api/doctor", doctorRoutes);

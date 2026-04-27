@@ -52,7 +52,7 @@ model Clinic {
 
   createdAt   DateTime @default(now())
 
-  // Owner relationship (not unique — provider can own multiple clinics)
+  // Owner relationship (not unique - provider can own multiple clinics)
   ownerId     String?
   owner       User?    @relation("ClinicOwner", fields: [ownerId], references: [id])
 

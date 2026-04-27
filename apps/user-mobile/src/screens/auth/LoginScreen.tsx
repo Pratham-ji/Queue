@@ -695,22 +695,34 @@ export default function LoginScreen() {
     }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (phoneNumber.length === 10) {
-      navigation.navigate("OTPVerification", {
-        phoneNumber: phoneNumber,
-        source: "login",
-      });
+      try {
+        const { api } = require("../../services/api");
+        await api.post("/auth/send-otp", { phone: phoneNumber, role: "PATIENT" });
+        navigation.navigate("OTPVerification", {
+          phoneNumber: phoneNumber,
+          source: "login",
+        });
+      } catch (err) {
+        setPhoneError("Failed to send OTP. Please try again.");
+      }
     }
   };
 
-  const handleVerifyPhone = () => {
+  const handleVerifyPhone = async () => {
     if (formData.phoneNumber.length === 10) {
-      navigation.navigate("OTPVerification", {
-        phoneNumber: formData.phoneNumber,
-        source: "signup",
-        signUpData: formData,
-      });
+      try {
+        const { api } = require("../../services/api");
+        await api.post("/auth/send-otp", { phone: formData.phoneNumber, role: "PATIENT" });
+        navigation.navigate("OTPVerification", {
+          phoneNumber: formData.phoneNumber,
+          source: "signup",
+          signUpData: formData,
+        });
+      } catch (err) {
+        setErrors({ phoneNumber: "Failed to send OTP. Please try again." });
+      }
     }
   };
 

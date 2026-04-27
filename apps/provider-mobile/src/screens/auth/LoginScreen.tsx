@@ -26,6 +26,9 @@ const COLORS = {
 };
 
 export default function LoginScreen({ navigation }: any) {
+  const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -33,8 +36,10 @@ export default function LoginScreen({ navigation }: any) {
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const handleLogin = async () => {
+  const handleAuth = async () => {
     if (!email || !password) return;
+    if (activeTab === "signup" && (!name || !phone)) return;
+    
     setIsLoading(true);
     setErrorMsg("");
 
@@ -42,7 +47,12 @@ export default function LoginScreen({ navigation }: any) {
       const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
       const { api } = require("../../services/api");
 
-      const res = await api.post("/auth/login", { email, password });
+      const endpoint = activeTab === "login" ? "/auth/login" : "/auth/signup";
+      const payload = activeTab === "login" 
+        ? { email, password }
+        : { name, email, password, phone, role: "PROVIDER" };
+
+      const res = await api.post(endpoint, payload);
 
       if (res.data.success) {
         const { accessToken, user } = res.data.data;
@@ -61,7 +71,7 @@ export default function LoginScreen({ navigation }: any) {
         navigation.replace("Dashboard");
       }
     } catch (error: any) {
-      const msg = error.response?.data?.error || "Login failed. Check your credentials.";
+      const msg = error.response?.data?.error || `${activeTab === "login" ? "Login" : "Signup"} failed. Check your details.`;
       setErrorMsg(msg);
     } finally {
       setIsLoading(false);
@@ -96,6 +106,60 @@ export default function LoginScreen({ navigation }: any) {
             duration={600}
             style={styles.form}
           >
+            {activeTab === "signup" && (
+              <>
+                {/* NAME INPUT */}
+                <Text style={styles.label}>Full Name</Text>
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    focusedInput === "name" && styles.inputWrapperFocus,
+                  ]}
+                >
+                  <Ionicons
+                    name="person-outline"
+                    size={20}
+                    color={focusedInput === "name" ? COLORS.primary : COLORS.subText}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Dr. John Doe"
+                    placeholderTextColor={COLORS.subText}
+                    value={name}
+                    onChangeText={setName}
+                    onFocus={() => setFocusedInput("name")}
+                    onBlur={() => setFocusedInput(null)}
+                  />
+                </View>
+
+                {/* PHONE INPUT */}
+                <Text style={styles.label}>Phone Number</Text>
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    focusedInput === "phone" && styles.inputWrapperFocus,
+                  ]}
+                >
+                  <Ionicons
+                    name="call-outline"
+                    size={20}
+                    color={focusedInput === "phone" ? COLORS.primary : COLORS.subText}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="10-digit number"
+                    placeholderTextColor={COLORS.subText}
+                    keyboardType="phone-pad"
+                    value={phone}
+                    onChangeText={setPhone}
+                    maxLength={10}
+                    onFocus={() => setFocusedInput("phone")}
+                    onBlur={() => setFocusedInput(null)}
+                  />
+                </View>
+              </>
+            )}
+
             {/* EMAIL INPUT */}
             <Text style={styles.label}>Email Address</Text>
             <View
@@ -162,28 +226,44 @@ export default function LoginScreen({ navigation }: any) {
             </View>
 
             {/* FORGOT PASSWORD */}
-            <TouchableOpacity style={styles.forgotBtn} activeOpacity={0.7}>
-              <Text style={styles.forgotText}>Forgot Password?</Text>
-            </TouchableOpacity>
+            {activeTab === "login" && (
+              <TouchableOpacity style={styles.forgotBtn} activeOpacity={0.7}>
+                <Text style={styles.forgotText}>Forgot Password?</Text>
+              </TouchableOpacity>
+            )}
 
-            {/* LOGIN BUTTON - High Performance (No heavy gradients) */}
+            {/* LOGIN / SIGNUP BUTTON */}
             <TouchableOpacity
               style={[
                 styles.loginBtn,
-                (!email || !password) && styles.loginBtnDisabled,
+                (!email || !password || (activeTab === "signup" && (!name || !phone))) && styles.loginBtnDisabled,
               ]}
-              onPress={handleLogin}
-              disabled={!email || !password || isLoading}
+              onPress={handleAuth}
+              disabled={!email || !password || (activeTab === "signup" && (!name || !phone)) || isLoading}
               activeOpacity={0.9}
             >
               {isLoading ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
                 <>
-                  <Text style={styles.loginText}>Sign In</Text>
+                  <Text style={styles.loginText}>
+                    {activeTab === "login" ? "Sign In" : "Register"}
+                  </Text>
                   <Ionicons name="arrow-forward" size={20} color="#FFF" />
                 </>
               )}
+            </TouchableOpacity>
+
+            {/* TOGGLE TAB */}
+            <TouchableOpacity
+              style={{ marginTop: 24, alignItems: "center" }}
+              onPress={() => setActiveTab(activeTab === "login" ? "signup" : "login")}
+            >
+              <Text style={{ color: COLORS.subText, fontSize: 14 }}>
+                {activeTab === "login"
+                  ? "New provider? Register here"
+                  : "Already have an account? Sign in"}
+              </Text>
             </TouchableOpacity>
           </Animatable.View>
         </View>

@@ -260,9 +260,10 @@ export default function LoginScreen({ navigation }: any) {
               onPress={() => setActiveTab(activeTab === "login" ? "signup" : "login")}
             >
               <Text style={{ color: COLORS.subText, fontSize: 14 }}>
-                {activeTab === "login"
-                  ? "New provider? Register here"
-                  : "Already have an account? Sign in"}
+                {activeTab === "login" ? "New provider? " : "Already have an account? "}
+                <Text style={{ color: COLORS.primary, fontWeight: "700" }}>
+                  {activeTab === "login" ? "Register here" : "Sign in"}
+                </Text>
               </Text>
             </TouchableOpacity>
           </Animatable.View>

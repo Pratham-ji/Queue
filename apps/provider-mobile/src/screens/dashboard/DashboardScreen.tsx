@@ -66,7 +66,7 @@ const DashboardHeader = ({ navigation, isOnline, toggleOnline, greeting, userNam
 );
 
 export default function DashboardScreen({ navigation }: any) {
-  const { currentPatient, isOnline, toggleOnline, callNextPatient, queue, fetchMyClinics, fetchQueue, activeClinic } =
+  const { currentPatient, isOnline, toggleOnline, callNextPatient, queue, fetchMyClinics, fetchQueue, activeClinic, allClinics, setActiveClinic } =
     useQueueStore();
   const [userName, setUserName] = React.useState("Doctor");
 
@@ -130,6 +130,40 @@ export default function DashboardScreen({ navigation }: any) {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
+        {/* CLINIC SWITCHER (Only if > 1 clinic) */}
+        {allClinics.length > 1 && (
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 16 }}
+            style={{ marginHorizontal: -24 }} // bleed to edge
+          >
+            {allClinics.map((c) => (
+              <TouchableOpacity
+                key={c.id}
+                onPress={() => setActiveClinic(c.id)}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  backgroundColor: activeClinic?.id === c.id ? COLORS.primary : COLORS.surface,
+                  borderRadius: 20,
+                  marginRight: 8,
+                  borderWidth: 1,
+                  borderColor: activeClinic?.id === c.id ? COLORS.primary : COLORS.border
+                }}
+              >
+                <Text style={{ 
+                  color: activeClinic?.id === c.id ? '#FFF' : COLORS.text,
+                  fontWeight: activeClinic?.id === c.id ? '600' : '500',
+                  fontSize: 13
+                }}>
+                  {c.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
         {/* HERO CARD */}
         <TouchableOpacity
           activeOpacity={0.95}

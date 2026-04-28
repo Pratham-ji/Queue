@@ -81,8 +81,8 @@ export const callNextPatient = async (req: Request, res: Response) => {
       orderBy: { token: "asc" },
     });
 
-    io.emit("queue_update", remainingQueue);
-    io.emit("current_patient", result);
+    io.to(clinicId).emit("queue_update", remainingQueue);
+    io.to(clinicId).emit("current_patient", result);
 
     res.status(200).json({ success: true, served: result });
   } catch (error: any) {
@@ -132,7 +132,7 @@ export const addPatient = async (req: Request, res: Response) => {
       orderBy: { token: "asc" },
     });
 
-    io.emit("queue_update", updatedQueue);
+    io.to(clinic.id).emit("queue_update", updatedQueue);
 
     res.status(201).json({ success: true, data: newPatient });
   } catch (error: any) {
@@ -189,7 +189,7 @@ export const joinQueue = async (req: AuthRequest, res: Response) => {
       orderBy: { token: "asc" },
     });
 
-    io.emit("queue_update", updatedQueue);
+    io.to(clinicId).emit("queue_update", updatedQueue);
 
     res.status(201).json({ success: true, data: newPatient });
   } catch (error) {
@@ -272,7 +272,7 @@ export const deleteQueue = async (req: AuthRequest, res: Response) => {
       orderBy: { token: "asc" },
     });
 
-    io.emit("queue_update", updatedQueue);
+    io.to(deletedPatient.clinicId!).emit("queue_update", updatedQueue);
 
     res.status(200).json({ success: true, message: "Patient removed from queue" });
   } catch (error) {

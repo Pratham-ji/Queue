@@ -6,12 +6,16 @@ export const getPendingClinics = async (req: Request, res: Response) => {
     const clinics = await prisma.clinic.findMany({
       where: { verified: false }, // Ensure 'npx prisma db push' was run
       include: {
-        users: {
-          select: {
-            name: true,
-            email: true,
-            phoneVerified: true,
-            aadhaarVerified: true,
+        members: {
+          include: {
+            user: {
+              select: {
+                name: true,
+                email: true,
+                phoneVerified: true,
+                aadhaarVerified: true,
+              },
+            },
           },
         },
         doctors: true,

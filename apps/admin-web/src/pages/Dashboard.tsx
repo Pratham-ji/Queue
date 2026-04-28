@@ -15,11 +15,13 @@ interface Clinic {
   address: string;
   city: string;
   addressProofUrl?: string; // Verification requirement
-  users: {
-    name: string;
-    email: string;
-    phone: string | null;
-    aadhaarVerified: boolean; // DigiLocker sync
+  members: {
+    user: {
+      name: string;
+      email: string;
+      phoneVerified: boolean;
+      aadhaarVerified: boolean; // DigiLocker sync
+    };
   }[];
   doctors: {
     name: string;
@@ -152,11 +154,11 @@ export default function Dashboard() {
               <div className="flex justify-between items-center mb-6 px-1">
                 <div className="text-xs">
                   <p className="text-white font-bold">
-                    {clinic.users[0]?.name}
+                    {clinic.members[0]?.user.name}
                   </p>
-                  <p className="text-slate-500">{clinic.users[0]?.email}</p>
+                  <p className="text-slate-500">{clinic.members[0]?.user.email}</p>
                 </div>
-                {clinic.users[0]?.aadhaarVerified ? (
+                {clinic.members[0]?.user.aadhaarVerified ? (
                   <ShieldCheck size={20} className="text-green-400" />
                 ) : (
                   <XCircle size={20} className="text-red-500" />

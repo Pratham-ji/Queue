@@ -16,9 +16,14 @@ import { COLORS, SHADOWS } from "../../theme";
 import { useQueueStore } from "../../store/queueStore";
 
 export default function ConsultationScreen({ navigation }: any) {
-  const { currentPatient, callNextPatient } = useQueueStore();
+  const { currentPatient, callNextPatient, activeClinicId } = useQueueStore();
   const [notes, setNotes] = useState("");
   const [duration, setDuration] = useState(0);
+  
+  // Prescription State
+  const [medicines, setMedicines] = useState<{name: string, dosage: string, duration: string}[]>([]);
+  const [newMed, setNewMed] = useState({ name: "", dosage: "", duration: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Live Timer
   useEffect(() => {
@@ -35,14 +40,29 @@ export default function ConsultationScreen({ navigation }: any) {
   const handleComplete = () => {
     Alert.alert(
       "Complete Session?",
-      "This will mark the patient as 'Served' and update the queue.",
+      "This will send the prescription to the pharmacy and call the next patient.",
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Complete",
-          onPress: () => {
-            callNextPatient(); // Logic to move to next or clear
-            navigation.goBack();
+          onPress: async () => {
+            setIsSubmitting(true);
+            try {
+              if (medicines.length > 0) {
+                const { api } = require("../../services/api");
+                await api.post("/prescription/create", {
+                  medicines,
+                  notes,
+                  patientId: currentPatient?.id,
+                  clinicId: activeClinicId
+                });
+              }
+              await callNextPatient();
+              navigation.goBack();
+            } catch (error) {
+              Alert.alert("Error", "Failed to submit prescription");
+              setIsSubmitting(false);
+            }
           },
         },
       ],
@@ -129,15 +149,69 @@ export default function ConsultationScreen({ navigation }: any) {
 
           {/* 4. DOCTOR NOTES */}
           <Text style={styles.sectionTitle}>CLINICAL NOTES</Text>
-          <View style={styles.inputBox}>
+          <View style={[styles.inputBox, { height: 100 }]}>
             <TextInput
               style={styles.input}
               multiline
-              placeholder="Type diagnosis, prescription, or observations..."
+              placeholder="General observations..."
               placeholderTextColor="#94A3B8"
               value={notes}
               onChangeText={setNotes}
             />
+          </View>
+
+          {/* 5. PRESCRIPTION BUILDER */}
+          <Text style={styles.sectionTitle}>PRESCRIPTION</Text>
+          
+          {medicines.map((med, index) => (
+            <View key={index} style={styles.medItem}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.medName}>{med.name}</Text>
+                <Text style={styles.medDetail}>{med.dosage} • {med.duration}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setMedicines(medicines.filter((_, i) => i !== index))}>
+                <Ionicons name="trash-outline" size={20} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
+          ))}
+
+          <View style={styles.addMedBox}>
+             <TextInput 
+               placeholder="Medicine Name (e.g. Paracetamol)" 
+               placeholderTextColor="#94A3B8"
+               value={newMed.name} 
+               onChangeText={t => setNewMed({...newMed, name: t})} 
+               style={styles.medInput} 
+             />
+             <View style={{flexDirection: 'row', gap: 8}}>
+               <TextInput 
+                 placeholder="Dosage (e.g. 500mg)" 
+                 placeholderTextColor="#94A3B8"
+                 value={newMed.dosage} 
+                 onChangeText={t => setNewMed({...newMed, dosage: t})} 
+                 style={[styles.medInput, {flex: 1}]} 
+               />
+               <TextInput 
+                 placeholder="Duration (e.g. 3 Days)" 
+                 placeholderTextColor="#94A3B8"
+                 value={newMed.duration} 
+                 onChangeText={t => setNewMed({...newMed, duration: t})} 
+                 style={[styles.medInput, {flex: 1}]} 
+               />
+             </View>
+             <TouchableOpacity 
+               style={[styles.addMedBtn, !newMed.name && { opacity: 0.5 }]} 
+               disabled={!newMed.name}
+               onPress={() => { 
+                 if(newMed.name) { 
+                   setMedicines([...medicines, newMed]); 
+                   setNewMed({name:'', dosage:'', duration:''}) 
+                 } 
+               }}
+             >
+                <Ionicons name="add" size={18} color="#0F62FE" />
+                <Text style={styles.addMedText}>Add Medicine</Text>
+             </TouchableOpacity>
           </View>
 
           <TouchableOpacity style={styles.historyLink}>
@@ -146,14 +220,18 @@ export default function ConsultationScreen({ navigation }: any) {
           </TouchableOpacity>
         </ScrollView>
 
-        {/* 5. ACTION FOOTER */}
+        {/* 6. ACTION FOOTER */}
         <View style={styles.footer}>
           <TouchableOpacity style={styles.holdBtn}>
             <Text style={styles.holdText}>On Hold</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.doneBtn} onPress={handleComplete}>
-            <Text style={styles.doneText}>Complete Session</Text>
-            <Ionicons name="checkmark-circle" size={20} color="#FFF" />
+          <TouchableOpacity 
+            style={[styles.doneBtn, isSubmitting && { opacity: 0.7 }]} 
+            onPress={handleComplete}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.doneText}>{isSubmitting ? "Sending..." : "Complete Session"}</Text>
+            {!isSubmitting && <Ionicons name="checkmark-circle" size={20} color="#FFF" />}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -305,4 +383,52 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   doneText: { color: "#FFF", fontWeight: "700", fontSize: 15 },
+  
+  // Prescription UI
+  medItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF",
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  medName: { fontSize: 16, fontWeight: "600", color: "#0F172A", marginBottom: 4 },
+  medDetail: { fontSize: 13, color: "#64748B" },
+  
+  addMedBox: {
+    backgroundColor: "#F8FAFC",
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderStyle: "dashed",
+    marginBottom: 24,
+  },
+  medInput: {
+    backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    color: "#0F172A",
+    marginBottom: 12,
+  },
+  addMedBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#EFF6FF",
+    padding: 12,
+    borderRadius: 12,
+    gap: 6,
+  },
+  addMedText: {
+    color: "#0F62FE",
+    fontWeight: "600",
+    fontSize: 14,
+  },
 });

@@ -19,6 +19,7 @@ import hospitalRoutes from "./routes/hospital.routes";
 import adminRoutes from "./routes/admin.routes";
 import providerRoutes from "./routes/provider.routes";
 import doctorRoutes from "./routes/doctor.routes";
+import prescriptionRoutes from "./routes/prescription.routes";
 import marketplaceRoutes from "./routes/marketplace.routes";
 
 // Controller imports for inline routes
@@ -126,6 +127,9 @@ app.post("/api/custom/next", callNext);
 
 // Role-based routes
 app.use("/api/doctor", doctorRoutes);
+
+// Feature Routes
+app.use("/api/prescription", prescriptionRoutes);
 
 // Test routes — ONLY in development
 if (process.env.NODE_ENV !== "production") {

@@ -63,6 +63,8 @@ model Clinic {
 
   // M:N provider memberships (marketplace model)
   members     ClinicMember[]
+
+  prescriptions Prescription[]
 }
 
 // 3. THE PATIENT (Queue Items - Walk-ins)
@@ -80,6 +82,8 @@ model Patient {
 
   clinicId      String
   clinic        Clinic      @relation(fields: [clinicId], references: [id])
+
+  prescriptions Prescription[]
 }
 
 // 4. THE APPOINTMENT (Booked Online)
@@ -124,6 +128,7 @@ model DoctorProfile {
   user        User?    @relation(fields: [userId], references: [id])
 
   appointments Appointment[]
+  prescriptions Prescription[]
 }
 
 // 6. INSTANT QUEUE (USP Feature)
@@ -194,4 +199,24 @@ enum ClinicRole {
   DOCTOR
   STAFF
   PHARMACIST
+}
+
+// 7. PRESCRIPTION RELAY (Advanced Pharmacy Integration)
+model Prescription {
+  id          String   @id @default(uuid())
+  medicines   Json     // Array: [{ name, dosage, duration }]
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  // The walk-in queue patient
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  
+  // The doctor who wrote it
+  doctorId    String
+  doctor      DoctorProfile @relation(fields: [doctorId], references: [id])
+
+  // The clinic pharmacy where it will be fulfilled
+  clinicId    String
+  clinic      Clinic   @relation(fields: [clinicId], references: [id])
 }

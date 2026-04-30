@@ -94,6 +94,8 @@ export const getClinicPrescriptions = async (req: AuthRequest, res: Response) =>
       return res.status(401).json({ success: false, error: "Unauthorized" });
     }
 
+    const userRole = req.user?.role;
+
     // Check if user is a member of this clinic
     const isMember = await prisma.clinicMember.findUnique({
       where: {
@@ -104,7 +106,7 @@ export const getClinicPrescriptions = async (req: AuthRequest, res: Response) =>
       },
     });
 
-    if (!isMember) {
+    if (!isMember && userRole !== "ADMIN") {
       return res.status(403).json({ success: false, error: "Not authorized for this clinic" });
     }
 

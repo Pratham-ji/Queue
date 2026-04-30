@@ -8,7 +8,9 @@ import {
   LogOut,
   ShieldCheck,
   ExternalLink,
+  Activity
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 interface Clinic {
   id: string;
   name: string;
@@ -31,6 +33,7 @@ interface Clinic {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -165,7 +168,7 @@ export default function Dashboard() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 mb-3">
                 <button
                   className="bg-slate-700 py-2 rounded-lg text-xs font-bold hover:bg-slate-600 transition"
                   onClick={() => alert("Rejection flow...")}
@@ -179,6 +182,14 @@ export default function Dashboard() {
                   Approve
                 </button>
               </div>
+
+              {/* QUICK ACCESS */}
+              <button
+                className="w-full bg-slate-900 border border-emerald-500/30 text-emerald-400 py-2 rounded-lg text-xs font-bold hover:bg-emerald-900/20 transition flex items-center justify-center gap-2"
+                onClick={() => navigate(`/pharmacy/${clinic.id}`)}
+              >
+                <Activity size={14} /> View Pharmacy Desk
+              </button>
             </div>
           ))}
         </div>

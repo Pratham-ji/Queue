@@ -10,39 +10,44 @@ import {
   StatusBar,
   FlatList,
   ActivityIndicator,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
-import { api } from "../../services/api"; // Your API service
+import { api } from "../../services/api";
+
+const { width } = Dimensions.get("window");
+const CARD_MARGIN = 16;
+const BENTO_PADDING = 20;
+const HALF_WIDTH = (width - BENTO_PADDING * 2 - CARD_MARGIN) / 2;
 
 const COLORS = {
-  primary: "#047857", // Emerald Green
-  bg: "#F8FAFC",
-  text: "#1E293B",
-  subText: "#64748B",
+  primary: "#10B981", // Emerald 500
+  primaryDark: "#047857", // Emerald 700
+  bg: "#0F172A", // Slate 900 - Premium Dark Mode
+  surface: "#1E293B", // Slate 800
+  text: "#F8FAFC",
+  subText: "#94A3B8",
   white: "#FFFFFF",
-  border: "#E2E8F0",
+  border: "#334155",
 };
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const [clinics, setClinics] = useState<any[]>([]);
-  const [doctors, setDoctors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. FETCH REAL DATA
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [clinicRes, doctorRes] = await Promise.all([
-          api.get("/hospital/clinics"),
-          api.get("/hospital/doctors"),
-        ]);
-
-        if (clinicRes.data.success) setClinics(clinicRes.data.data);
-        if (doctorRes.data.success) setDoctors(doctorRes.data.data);
+        const clinicRes = await api.get("/hospital/clinics");
+        if (clinicRes.data.success) {
+          // Sort by rating or default logic
+          const fetched = clinicRes.data.data;
+          setClinics(fetched);
+        }
       } catch (error) {
         console.error("Failed to load home data", error);
       } finally {
@@ -52,63 +57,102 @@ export default function HomeScreen() {
     fetchData();
   }, []);
 
-  // 1. IMPROVED CLINIC CARD RENDER
-  const renderClinic = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      style={styles.clinicCard}
-      onPress={() => navigation.navigate("HospitalDetails", { id: item.id })}
-    >
-      {/* ⚠️ FIX: Image now fills 100% of height initially */}
-      <Image
-        source={{ uri: item.image }}
-        style={styles.clinicImage}
-        resizeMode="cover"
-      />
-      <LinearGradient
-        colors={["transparent", "rgba(0,0,0,0.8)"]}
-        style={styles.cardGradient}
-      />
-      <View style={styles.clinicOverlay}>
-        <Text style={styles.clinicName} numberOfLines={1}>
-          {item.name}
-        </Text>
-        <Text style={styles.clinicAddr} numberOfLines={1}>
-          {item.address}
-        </Text>
-        <View style={styles.ratingTag}>
-          <Ionicons name="star" size={10} color="#FFF" />
-          <Text style={styles.ratingNum}>{item.rating}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+  const handleQuickJoin = (clinicId: string) => {
+    // Pass the specific clinicId directly to the Queue Screen for instant joining
+    navigation.navigate("Queue", { clinicId });
+  };
 
-  const renderDoctor = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      style={styles.docCard}
-      onPress={() => navigation.navigate("Booking", { doctorId: item.id })}
-    >
-      <View style={styles.docImgWrap}>
-        <Image source={{ uri: item.image }} style={styles.docImage} />
-        <View style={styles.verifiedBadge}>
-          <Ionicons name="checkmark" size={10} color="#FFF" />
+  const handleClinicTap = (clinicId: string) => {
+    navigation.navigate("HospitalDetails", { id: clinicId });
+  };
+
+  const renderHeroCard = (clinic: any) => {
+    if (!clinic) return null;
+    return (
+      <TouchableOpacity
+        activeOpacity={0.9}
+        style={styles.heroCard}
+        onPress={() => handleClinicTap(clinic.id)}
+      >
+        <Image source={{ uri: clinic.image || "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2753&auto=format&fit=crop" }} style={styles.heroImage} />
+        <LinearGradient
+          colors={["transparent", "rgba(15, 23, 42, 0.95)"]}
+          style={styles.heroGradient}
+        />
+        
+        <View style={styles.heroContent}>
+          <View style={styles.heroTopRow}>
+            <View style={styles.glassBadge}>
+              <Ionicons name="star" size={12} color="#FBBF24" />
+              <Text style={styles.badgeText}>{clinic.rating || "4.9"}</Text>
+            </View>
+            <View style={[styles.glassBadge, { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
+              <Ionicons name="flash" size={12} color={COLORS.primary} />
+              <Text style={[styles.badgeText, { color: COLORS.primary }]}>Fast Track</Text>
+            </View>
+          </View>
+          
+          <Text style={styles.heroTitle} numberOfLines={1}>{clinic.name}</Text>
+          <Text style={styles.heroSub} numberOfLines={1}>
+            <Ionicons name="location" size={12} /> {clinic.address}, {clinic.city}
+          </Text>
+
+          <TouchableOpacity 
+            style={styles.quickJoinBtn}
+            onPress={() => handleQuickJoin(clinic.id)}
+          >
+            <LinearGradient
+              colors={[COLORS.primary, COLORS.primaryDark]}
+              start={{x:0, y:0}} end={{x:1, y:1}}
+              style={styles.quickJoinGradient}
+            >
+              <Text style={styles.quickJoinText}>Join Queue Now</Text>
+              <Ionicons name="arrow-forward" size={16} color="#FFF" />
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
-      </View>
-      <Text style={styles.docName} numberOfLines={1}>
-        {item.name}
-      </Text>
-      <Text style={styles.docSpec}>{item.specialty}</Text>
-      <View style={styles.priceTag}>
-        <Text style={styles.priceText}>₹{item.price}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
+
+  const renderSubCard = (clinic: any, index: number) => {
+    return (
+      <TouchableOpacity
+        key={clinic.id}
+        activeOpacity={0.9}
+        style={[
+          styles.subCard,
+          { marginRight: index % 2 === 0 ? CARD_MARGIN : 0 }
+        ]}
+        onPress={() => handleClinicTap(clinic.id)}
+      >
+        <Image source={{ uri: clinic.image || "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2753&auto=format&fit=crop" }} style={styles.subImage} />
+        <LinearGradient
+          colors={["transparent", "rgba(15, 23, 42, 0.9)"]}
+          style={styles.subGradient}
+        />
+        <View style={styles.subContent}>
+          <View style={styles.glassBadgeSmall}>
+            <Ionicons name="star" size={10} color="#FBBF24" />
+            <Text style={styles.badgeTextSmall}>{clinic.rating || "4.8"}</Text>
+          </View>
+          <Text style={styles.subTitle} numberOfLines={1}>{clinic.name}</Text>
+          <Text style={styles.subSub} numberOfLines={1}>{clinic.city}</Text>
+          
+          <TouchableOpacity 
+            style={styles.subQuickBtn}
+            onPress={() => handleQuickJoin(clinic.id)}
+          >
+            <Text style={styles.subQuickText}>Join</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <View style={{ flex: 1, backgroundColor: COLORS.bg, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
@@ -116,13 +160,13 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.bg} />
 
       {/* HEADER */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Hello, Patient 👋</Text>
-          <Text style={styles.title}>Find your doctor</Text>
+          <Text style={styles.greeting}>Good Morning 👋</Text>
+          <Text style={styles.title}>Find Care Near You</Text>
         </View>
         <Image
           source={{ uri: "https://i.pravatar.cc/150?u=user" }}
@@ -130,11 +174,11 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* SEARCH BAR */}
+      {/* SEARCH BAR (Glassmorphic) */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color={COLORS.subText} />
         <TextInput
-          placeholder="Search for clinics, doctors..."
+          placeholder="Search hospitals, doctors..."
           style={styles.searchInput}
           placeholderTextColor={COLORS.subText}
         />
@@ -147,56 +191,27 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
       >
-        {/* BANNER */}
-        <View style={styles.banner}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.bannerTitle}>Skip the Queue!</Text>
-            <Text style={styles.bannerSub}>Book online & save time.</Text>
-            <TouchableOpacity style={styles.bannerBtn}>
-              <Text style={styles.bannerBtnText}>Check Queue Status</Text>
-            </TouchableOpacity>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Featured Marketplace</Text>
+        </View>
+
+        {/* BENTO GRID LAYOUT */}
+        <View style={styles.bentoGrid}>
+          {clinics.length > 0 && renderHeroCard(clinics[0])}
+          
+          <View style={styles.subGrid}>
+            {clinics.slice(1).map((clinic, idx) => renderSubCard(clinic, idx))}
           </View>
-          <Ionicons
-            name="time"
-            size={80}
-            color="rgba(255,255,255,0.2)"
-            style={{ position: "absolute", right: -10, bottom: -10 }}
-          />
         </View>
 
-        {/* HOSPITALS SECTION */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Nearby Hospitals</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAll}>See All</Text>
-          </TouchableOpacity>
-        </View>
+        {/* EMPTY STATE HANDLING */}
+        {clinics.length === 0 && (
+          <View style={styles.emptyState}>
+            <Ionicons name="medical-outline" size={48} color={COLORS.border} />
+            <Text style={styles.emptyText}>No clinics available yet.</Text>
+          </View>
+        )}
 
-        <FlatList
-          horizontal
-          data={clinics}
-          renderItem={renderClinic}
-          keyExtractor={(item) => item.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20 }}
-        />
-
-        {/* TOP DOCTORS SECTION */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Top Doctors</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAll}>See All</Text>
-          </TouchableOpacity>
-        </View>
-
-        <FlatList
-          horizontal
-          data={doctors}
-          renderItem={renderDoctor}
-          keyExtractor={(item) => item.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20 }}
-        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -208,31 +223,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: BENTO_PADDING,
     paddingTop: 10,
     marginBottom: 20,
   },
-  greeting: { fontSize: 14, color: COLORS.subText },
-  title: { fontSize: 22, fontWeight: "700", color: COLORS.text },
+  greeting: { fontSize: 14, color: COLORS.subText, marginBottom: 4 },
+  title: { fontSize: 24, fontWeight: "800", color: COLORS.text, letterSpacing: -0.5 },
   userAvatar: {
-    width: 45,
-    height: 45,
-    borderRadius: 25,
-    backgroundColor: "#E2E8F0",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: COLORS.surface,
   },
 
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.white,
-    marginHorizontal: 20,
+    backgroundColor: COLORS.surface,
+    marginHorizontal: BENTO_PADDING,
     paddingHorizontal: 16,
-    height: 50,
-    borderRadius: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    height: 54,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     marginBottom: 24,
   },
   searchInput: { flex: 1, marginLeft: 10, fontSize: 16, color: COLORS.text },
@@ -245,140 +259,126 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  banner: {
-    backgroundColor: COLORS.primary,
-    marginHorizontal: 20,
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 30,
-    flexDirection: "row",
-    overflow: "hidden",
-  },
-  bannerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#FFF",
-    marginBottom: 4,
-  },
-  bannerSub: { fontSize: 14, color: "#D1FAE5", marginBottom: 16 },
-  bannerBtn: {
-    backgroundColor: "#FFF",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignSelf: "flex-start",
-  },
-  bannerBtnText: { color: COLORS.primary, fontWeight: "700", fontSize: 12 },
-
   sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: BENTO_PADDING,
     marginBottom: 16,
   },
-  sectionTitle: { fontSize: 18, fontWeight: "700", color: COLORS.text },
-  seeAll: { color: COLORS.primary, fontWeight: "600", fontSize: 14 },
+  sectionTitle: { fontSize: 18, fontWeight: "700", color: COLORS.text, letterSpacing: 0.5 },
 
-  // CLINIC CARD
-  clinicCard: {
-    width: 260,
-    height: 180, // Fixed height for consistency
-    backgroundColor: "#F1F5F9", // Fallback color
-    borderRadius: 20,
-    marginRight: 16,
-    overflow: "hidden", // Crucial for image clipping
-    position: "relative",
-    marginBottom: 10,
+  bentoGrid: {
+    paddingHorizontal: BENTO_PADDING,
   },
-  clinicImage: {
+  
+  // HERO CARD (SPAN 2)
+  heroCard: {
     width: "100%",
-    height: "100%", // Fills the card
+    height: 280,
+    borderRadius: 24,
+    overflow: "hidden",
+    marginBottom: CARD_MARGIN,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  cardGradient: {
+  heroImage: { width: "100%", height: "100%", position: "absolute" },
+  heroGradient: { position: "absolute", bottom: 0, left: 0, right: 0, height: "80%" },
+  heroContent: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    height: 100,
+    padding: 20,
   },
-  clinicOverlay: {
-    position: "absolute",
-    bottom: 12,
-    left: 12,
-    right: 12,
+  heroTopRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
   },
-  clinicName: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#FFF",
-    marginBottom: 2,
-  },
-  clinicAddr: { fontSize: 12, color: "rgba(255,255,255,0.8)", marginBottom: 6 },
-  ratingTag: {
+  glassBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(255,255,255,0.15)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  badgeText: { color: "#FFF", fontSize: 12, fontWeight: "700" },
+  heroTitle: { fontSize: 24, fontWeight: "800", color: "#FFF", marginBottom: 4 },
+  heroSub: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginBottom: 16 },
+  
+  quickJoinBtn: {
+    width: "100%",
+    height: 48,
+    borderRadius: 14,
+    overflow: "hidden",
+  },
+  quickJoinGradient: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  quickJoinText: { color: "#FFF", fontWeight: "700", fontSize: 15 },
+
+  // SUB CARDS (SPAN 1)
+  subGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  subCard: {
+    width: HALF_WIDTH,
+    height: 200,
+    borderRadius: 20,
+    overflow: "hidden",
+    marginBottom: CARD_MARGIN,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  subImage: { width: "100%", height: "100%", position: "absolute" },
+  subGradient: { position: "absolute", bottom: 0, left: 0, right: 0, height: "70%" },
+  subContent: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 12,
+  },
+  glassBadgeSmall: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
     alignSelf: "flex-start",
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
-  },
-  ratingNum: { color: "#FFF", fontSize: 10, fontWeight: "700", marginLeft: 4 },
-  docCount: { fontSize: 12, color: COLORS.subText, marginLeft: 4 },
-
-  // DOCTOR CARD
-  docCard: {
-    width: 140,
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: 12,
-    alignItems: "center",
-    marginRight: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-    marginBottom: 10,
-  },
-  docImgWrap: { position: "relative", marginBottom: 10 },
-  docImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "#F1F5F9",
-  },
-  verifiedBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    backgroundColor: "#3B82F6",
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#FFF",
-  },
-  docName: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: COLORS.text,
-    textAlign: "center",
-    marginBottom: 2,
-  },
-  docSpec: {
-    fontSize: 11,
-    color: COLORS.subText,
-    textAlign: "center",
+    borderRadius: 8,
+    gap: 2,
     marginBottom: 8,
   },
-  priceTag: {
-    backgroundColor: "#ECFDF5",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+  badgeTextSmall: { color: "#FFF", fontSize: 10, fontWeight: "700" },
+  subTitle: { fontSize: 15, fontWeight: "700", color: "#FFF", marginBottom: 2 },
+  subSub: { fontSize: 11, color: "rgba(255,255,255,0.6)", marginBottom: 12 },
+  
+  subQuickBtn: {
+    backgroundColor: "rgba(255,255,255,0.15)",
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
   },
-  priceText: { fontSize: 10, fontWeight: "700", color: COLORS.primary },
+  subQuickText: { color: "#FFF", fontWeight: "600", fontSize: 13 },
+
+  emptyState: {
+    paddingTop: 60,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyText: {
+    marginTop: 16,
+    color: COLORS.subText,
+    fontSize: 16,
+  }
 });

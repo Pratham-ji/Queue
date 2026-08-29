@@ -9,27 +9,27 @@ datasource db {
 
 // 1. THE USER (Doctors, Patients, Staff)
 model User {
-  id          String   @id @default(uuid())
-  email       String   @unique
-  password    String
-  name        String
-  phone       String?
-  role        Role     @default(PROVIDER)
+  id       String  @id @default(uuid())
+  email    String  @unique
+  password String
+  name     String
+  phone    String?
+  role     Role    @default(PROVIDER)
 
   // --- NEW VERIFICATION FIELDS ---
-  phoneVerified    Boolean @default(false) // For OTP Status
-  aadhaarVerified  Boolean @default(false) // For DigiLocker Status
-  livePhotoUrl     String?                 // The "Selfie" URL
+  phoneVerified   Boolean @default(false) // For OTP Status
+  aadhaarVerified Boolean @default(false) // For DigiLocker Status
+  livePhotoUrl    String? // The "Selfie" URL
   // -------------------------------
 
   createdAt DateTime @default(now())
 
   // Relations...
-  clinicId       String?
-  clinic         Clinic?        @relation("ClinicToUser", fields: [clinicId], references: [id])
-  ownedClinics   Clinic[]       @relation("ClinicOwner")
-  doctorProfile  DoctorProfile?
-  appointments   Appointment[]
+  clinicId      String?
+  clinic        Clinic?        @relation("ClinicToUser", fields: [clinicId], references: [id])
+  ownedClinics  Clinic[]       @relation("ClinicOwner")
+  doctorProfile DoctorProfile?
+  appointments  Appointment[]
 
   // M:N clinic memberships (marketplace model)
   clinicMemberships ClinicMember[]
@@ -37,118 +37,120 @@ model User {
 
 // 2. THE CLINIC
 model Clinic {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   name        String
   address     String
-  city        String   @default("Dehradun")
-  image       String   @default("")
-  rating      Float    @default(4.5)
+  city        String  @default("Dehradun")
+  image       String  @default("")
+  rating      Float   @default(4.5)
   description String?
-  verified    Boolean  @default(false)
+  verified    Boolean @default(false)
 
   // --- NEW DOCS ---
   addressProofUrl String? // Utility bill or Registration deed
   // ----------------
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   // Owner relationship (not unique - provider can own multiple clinics)
-  ownerId     String?
-  owner       User?    @relation("ClinicOwner", fields: [ownerId], references: [id])
+  ownerId String?
+  owner   User?   @relation("ClinicOwner", fields: [ownerId], references: [id])
 
   // Relations...
-  users       User[]   @relation("ClinicToUser")
-  doctors     DoctorProfile[]
-  patients    Patient[]
+  users    User[]          @relation("ClinicToUser")
+  doctors  DoctorProfile[]
+  patients Patient[]
 
   // M:N provider memberships (marketplace model)
-  members     ClinicMember[]
+  members ClinicMember[]
 
   prescriptions Prescription[]
 }
 
 // 3. THE PATIENT (Queue Items - Walk-ins)
 model Patient {
-  id            String      @id @default(uuid())
-  token         Int
-  name          String
-  phone         String?
-  type          VisitType   @default(CHECKUP)
-  status        QueueStatus @default(WAITING)
+  id     String      @id @default(uuid())
+  token  Int
+  name   String
+  phone  String?
+  type   VisitType   @default(CHECKUP)
+  status QueueStatus @default(WAITING)
 
-  arrivalTime   DateTime    @default(now())
+  arrivalTime   DateTime  @default(now())
   servedTime    DateTime?
   completedTime DateTime?
 
-  clinicId      String
-  clinic        Clinic      @relation(fields: [clinicId], references: [id])
+  clinicId String
+  clinic   Clinic @relation(fields: [clinicId], references: [id])
+
+  expoPushToken String? // Expo Push Token for lock-screen notifications
 
   prescriptions Prescription[]
 }
 
 // 4. THE APPOINTMENT (Booked Online)
 model Appointment {
-  id          String   @id @default(uuid())
+  id          String @id @default(uuid())
   date        String
   time        String
-  status      String   @default("CONFIRMED")
+  status      String @default("CONFIRMED")
   patientName String
 
-  doctorId    String?
-  doctor      DoctorProfile? @relation(fields: [doctorId], references: [id])
+  doctorId String?
+  doctor   DoctorProfile? @relation(fields: [doctorId], references: [id])
 
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id])
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 // 5. DOCTOR PROFILE (Details for the Doctor)
 model DoctorProfile {
-  id          String   @id @default(uuid())
-  name        String
-  specialty   String
-  experience  Int
-  image       String
-  rating      Float    @default(4.8)
-  price       Int
-  about       String?
+  id         String  @id @default(uuid())
+  name       String
+  specialty  String
+  experience Int
+  image      String
+  rating     Float   @default(4.8)
+  price      Int
+  about      String?
 
   // --- NEW LICENSE FIELDS ---
-  licenseNumber    String?  // e.g. "MCI-12345"
-  registrationYear Int?     // e.g. 2018
-  licenseCertUrl   String?  // URL to the uploaded file
-  degreeCertUrl    String?  // URL to the degree
+  licenseNumber    String? // e.g. "MCI-12345"
+  registrationYear Int? // e.g. 2018
+  licenseCertUrl   String? // URL to the uploaded file
+  degreeCertUrl    String? // URL to the degree
   // --------------------------
 
-  clinicId    String
-  clinic      Clinic   @relation(fields: [clinicId], references: [id])
+  clinicId String
+  clinic   Clinic @relation(fields: [clinicId], references: [id])
 
-  userId      String?  @unique
-  user        User?    @relation(fields: [userId], references: [id])
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id])
 
-  appointments Appointment[]
+  appointments  Appointment[]
   prescriptions Prescription[]
 }
 
 // 6. INSTANT QUEUE (USP Feature)
 model CustomSession {
-  id          String   @id @default(uuid())
-  hostName    String
-  title       String
-  joinCode    String   @unique
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid())
+  hostName  String
+  title     String
+  joinCode  String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
 
   participants SessionParticipant[]
 }
 
 model SessionParticipant {
-  id        String   @id @default(uuid())
-  name      String
-  token     Int
-  status    String   @default("WAITING")
-  joinedAt  DateTime @default(now())
+  id       String   @id @default(uuid())
+  name     String
+  token    Int
+  status   String   @default("WAITING")
+  joinedAt DateTime @default(now())
 
   sessionId String
   session   CustomSession @relation(fields: [sessionId], references: [id])
@@ -182,16 +184,16 @@ enum QueueStatus {
 model ClinicMember {
   id        String     @id @default(uuid())
   role      ClinicRole @default(STAFF)
-  isPrimary Boolean    @default(false)  // user's "active" clinic for this session
+  isPrimary Boolean    @default(false) // user's "active" clinic for this session
   joinedAt  DateTime   @default(now())
 
-  userId    String
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  clinicId  String
-  clinic    Clinic     @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicId String
+  clinic   Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, clinicId])  // prevent duplicate memberships
+  @@unique([userId, clinicId]) // prevent duplicate memberships
 }
 
 enum ClinicRole {
@@ -203,20 +205,20 @@ enum ClinicRole {
 
 // 7. PRESCRIPTION RELAY (Advanced Pharmacy Integration)
 model Prescription {
-  id          String   @id @default(uuid())
-  medicines   Json     // Array: [{ name, dosage, duration }]
-  notes       String?
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid())
+  medicines Json // Array: [{ name, dosage, duration }]
+  notes     String?
+  createdAt DateTime @default(now())
 
   // The walk-in queue patient
-  patientId   String
-  patient     Patient  @relation(fields: [patientId], references: [id])
-  
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
   // The doctor who wrote it
-  doctorId    String
-  doctor      DoctorProfile @relation(fields: [doctorId], references: [id])
+  doctorId String
+  doctor   DoctorProfile @relation(fields: [doctorId], references: [id])
 
   // The clinic pharmacy where it will be fulfilled
-  clinicId    String
-  clinic      Clinic   @relation(fields: [clinicId], references: [id])
+  clinicId String
+  clinic   Clinic @relation(fields: [clinicId], references: [id])
 }

@@ -15,7 +15,14 @@
       "backgroundColor": "#ffffff"
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#10B981"
+        }
+      ]
     ]
   }
 }

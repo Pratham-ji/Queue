@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../utils/prisma";
 import { AuthRequest } from "../middleware/auth.middleware";
+import { sendPushNotification } from "../services/pushNotification";
 
 // ==========================================
 // 1. GET QUEUE (Robust Version)
@@ -84,6 +85,29 @@ export const callNextPatient = async (req: Request, res: Response) => {
     io.to(clinicId).emit("queue_update", remainingQueue);
     io.to(clinicId).emit("current_patient", result);
 
+    // --- PUSH NOTIFICATION PIPELINE (non-blocking) ---
+    try {
+      // Position 1: The patient who is NOW being served
+      if (result.expoPushToken) {
+        await sendPushNotification(
+          result.expoPushToken,
+          "It's Your Turn! 🏥",
+          "Please enter the doctor's room now."
+        );
+      }
+      
+      // Position 2: The patient who is NEXT after the current one
+      if (remainingQueue.length > 0 && remainingQueue[0].expoPushToken) {
+        await sendPushNotification(
+          remainingQueue[0].expoPushToken,
+          "You're Almost Up! ⏳",
+          "You're next in line — please head to the waiting area."
+        );
+      }
+    } catch (pushError) {
+      console.error("Push dispatch failed (non-fatal):", pushError);
+    }
+
     res.status(200).json({ success: true, served: result });
   } catch (error: any) {
     console.error("Error calling next:", error.message || error);
@@ -96,7 +120,7 @@ export const callNextPatient = async (req: Request, res: Response) => {
 // ==========================================
 export const addPatient = async (req: Request, res: Response) => {
   try {
-    const { name, phone } = req.body;
+    const { name, phone, expoPushToken } = req.body;
     const clinicId = req.params.clinicId as string;
 
     if (!name) return res.status(400).json({ error: "Name is required" });
@@ -121,6 +145,7 @@ export const addPatient = async (req: Request, res: Response) => {
           token,
           status: "WAITING",
           clinicId: clinic.id,
+          expoPushToken: expoPushToken || null,
         },
       });
     });
@@ -144,7 +169,7 @@ export const addPatient = async (req: Request, res: Response) => {
 // JOIN QUEUE - Allows a user to join a queue
 export const joinQueue = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, phone, clinicId } = req.body;
+    const { name, phone, clinicId, expoPushToken } = req.body;
     const userId = req.user?.userId;
 
     if (!name || !clinicId) {
@@ -178,6 +203,7 @@ export const joinQueue = async (req: AuthRequest, res: Response) => {
           token,
           status: "WAITING",
           clinicId,
+          expoPushToken: expoPushToken || null,
         },
       });
     });

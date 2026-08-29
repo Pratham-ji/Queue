@@ -9,6 +9,7 @@ import HospitalDetailsScreen from "../screens/hospital/HospitalDetailsScreen";
 import CustomSessionScreen from "../screens/create/CustomSessionScreen";
 import QueueScreen from "../screens/queue/QueueScreen";
 import BookingScreen from "../screens/booking/BookingScreen"; // ✅ IMPORT THIS
+import { useUserQueueStore } from "../store/userQueueStore";
 
 export type RootStackParamList = {
   Login: undefined;
@@ -24,6 +25,12 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
+  const registerPushToken = useUserQueueStore((state) => state.registerPushToken);
+
+  React.useEffect(() => {
+    registerPushToken();
+  }, []);
+
   return (
     <Stack.Navigator
       initialRouteName="Login"

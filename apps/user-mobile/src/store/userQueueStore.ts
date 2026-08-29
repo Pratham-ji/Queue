@@ -27,6 +27,7 @@ interface UserQueueState {
   peopleAhead: number;
   currentServingToken: number | null;
   estimatedWait: number; // In minutes
+  expoPushToken: string | null;
 
   setClinic: (clinicId: string) => void;
   joinQueue: (name: string, phone: string) => Promise<void>;
@@ -35,6 +36,7 @@ interface UserQueueState {
   loadSession: () => Promise<void>;
   refreshData: () => Promise<void>;
   setupAppStateListener: () => () => void;
+  registerPushToken: () => Promise<void>;
 }
 
 export const useUserQueueStore = create<UserQueueState>((set, get) => ({
@@ -46,20 +48,38 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
   peopleAhead: 0,
   currentServingToken: null,
   estimatedWait: 0,
+  expoPushToken: null,
 
   // 0. SET CLINIC (called from navigation — user picks a clinic)
   setClinic: (clinicId: string) => {
     set({ activeClinicId: clinicId });
   },
 
+  // 0.5 REGISTER PUSH TOKEN
+  registerPushToken: async () => {
+    try {
+      const { registerForPushNotifications } = await import("../services/notifications");
+      const token = await registerForPushNotifications();
+      if (token) {
+        set({ expoPushToken: token });
+      }
+    } catch (e) {
+      console.warn("Could not register push token", e);
+    }
+  },
+
   // 1. JOIN QUEUE (uses dynamic clinicId)
   joinQueue: async (name, phone) => {
-    const { activeClinicId } = get();
+    const { activeClinicId, expoPushToken } = get();
     if (!name || !activeClinicId) return;
 
     set({ isLoading: true });
     try {
-      const res = await api.post(`/queue/${activeClinicId}/add`, { name, phone });
+      const res = await api.post(`/queue/${activeClinicId}/add`, { 
+        name, 
+        phone,
+        expoPushToken
+      });
 
       if (res.data.success) {
         const token = res.data.data.token;

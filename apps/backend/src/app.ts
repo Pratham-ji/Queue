@@ -1,6 +1,4 @@
-import dotenv from "dotenv";
-// Load Config FIRST, before any other imports
-dotenv.config();
+import "dotenv/config"; // Load Config FIRST, before any other imports
 
 import express from "express";
 import http from "http";

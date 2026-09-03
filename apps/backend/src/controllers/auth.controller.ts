@@ -3,6 +3,7 @@ import { prisma } from "../utils/prisma";
 import { Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { generateAccessToken, generateRefreshToken } from "../utils/jwt.utils";
+import { AuthRequest } from "../middleware/auth.middleware";
 
 // ==========================================
 // 1. SIGN UP (Secure Registration)
@@ -130,5 +131,20 @@ export const login = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Login Error:", error);
     res.status(500).json({ success: false, error: "Login failed" });
+  }
+};
+
+export const getMe = async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ success: false, error: "Unauthorized" });
+
+    const dbUser = await prisma.user.findUnique({ where: { id: user.userId } });
+    if (!dbUser) return res.status(404).json({ success: false, error: "User not found" });
+
+    const { password, ...safeUser } = dbUser;
+    res.json({ success: true, data: safeUser });
+  } catch (error) {
+    res.status(500).json({ success: false, error: "Failed to fetch profile" });
   }
 };

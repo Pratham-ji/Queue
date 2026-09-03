@@ -9,7 +9,7 @@ import { generateAccessToken, generateRefreshToken } from "../utils/jwt.utils";
 // ==========================================
 export const signup = async (req: Request, res: Response) => {
   try {
-    const { name, email, password, phone, role } = req.body;
+    const { name, email, password, phone, role, clinicName, address } = req.body;
 
     // Map the incoming string to the VALID Prisma Enum
     let assignedRole: Role = Role.PATIENT; // Default
@@ -31,15 +31,36 @@ export const signup = async (req: Request, res: Response) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create User
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        phone,
-        role: assignedRole,
-      },
+    // Create User & Clinic in a transaction
+    const user = await prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          phone,
+          role: assignedRole,
+        },
+      });
+
+      if (assignedRole === Role.PROVIDER && clinicName && address) {
+        await tx.clinic.create({
+          data: {
+            name: clinicName,
+            address,
+            ownerId: newUser.id,
+            members: {
+              create: {
+                userId: newUser.id,
+                role: "OWNER",
+                isPrimary: true,
+              },
+            },
+          },
+        });
+      }
+
+      return newUser;
     });
 
     // Generate Tokens (unified with jwt.utils system)

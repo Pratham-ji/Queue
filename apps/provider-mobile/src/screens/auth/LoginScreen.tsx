@@ -31,6 +31,8 @@ export default function LoginScreen({ navigation }: any) {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [clinicName, setClinicName] = useState("");
+  const [address, setAddress] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export default function LoginScreen({ navigation }: any) {
 
   const handleAuth = async () => {
     if (!email || !password) return;
-    if (activeTab === "signup" && (!name || !phone)) return;
+    if (activeTab === "signup" && (!name || !phone || !clinicName || !address)) return;
     
     setIsLoading(true);
     setErrorMsg("");
@@ -50,7 +52,7 @@ export default function LoginScreen({ navigation }: any) {
       const endpoint = activeTab === "login" ? "/auth/login" : "/auth/signup";
       const payload = activeTab === "login" 
         ? { email, password }
-        : { name, email, password, phone, role: "PROVIDER" };
+        : { name, email, password, phone, role: "PROVIDER", clinicName, address };
 
       const res = await api.post(endpoint, payload);
 
@@ -154,6 +156,54 @@ export default function LoginScreen({ navigation }: any) {
                     onChangeText={setPhone}
                     maxLength={10}
                     onFocus={() => setFocusedInput("phone")}
+                    onBlur={() => setFocusedInput(null)}
+                  />
+                </View>
+
+                {/* CLINIC NAME INPUT */}
+                <Text style={styles.label}>Clinic Name</Text>
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    focusedInput === "clinicName" && styles.inputWrapperFocus,
+                  ]}
+                >
+                  <Ionicons
+                    name="business-outline"
+                    size={20}
+                    color={focusedInput === "clinicName" ? COLORS.primary : COLORS.subText}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. Apollo Clinic"
+                    placeholderTextColor={COLORS.subText}
+                    value={clinicName}
+                    onChangeText={setClinicName}
+                    onFocus={() => setFocusedInput("clinicName")}
+                    onBlur={() => setFocusedInput(null)}
+                  />
+                </View>
+
+                {/* CLINIC ADDRESS INPUT */}
+                <Text style={styles.label}>Clinic Address</Text>
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    focusedInput === "address" && styles.inputWrapperFocus,
+                  ]}
+                >
+                  <Ionicons
+                    name="location-outline"
+                    size={20}
+                    color={focusedInput === "address" ? COLORS.primary : COLORS.subText}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. 123 Health St, Dehradun"
+                    placeholderTextColor={COLORS.subText}
+                    value={address}
+                    onChangeText={setAddress}
+                    onFocus={() => setFocusedInput("address")}
                     onBlur={() => setFocusedInput(null)}
                   />
                 </View>

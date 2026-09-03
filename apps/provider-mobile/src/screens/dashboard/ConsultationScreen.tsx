@@ -50,11 +50,15 @@ export default function ConsultationScreen({ navigation }: any) {
             try {
               if (medicines.length > 0) {
                 const { api } = require("../../services/api");
+                const AsyncStorage = require("@react-native-async-storage/async-storage").default;
+                const token = await AsyncStorage.getItem("access_token");
                 await api.post("/prescription/create", {
                   medicines,
                   notes,
                   patientId: currentPatient?.id,
                   clinicId: activeClinicId
+                }, {
+                  headers: { Authorization: `Bearer ${token}` }
                 });
               }
               await callNextPatient();

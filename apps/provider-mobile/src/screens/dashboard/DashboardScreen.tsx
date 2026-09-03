@@ -19,10 +19,10 @@ import { COLORS } from "../../theme";
 import { api } from "../../services/api";
 
 // --- MINIMAL HEADER ---
-const DashboardHeader = ({ navigation, isOnline, toggleOnline, greeting, userName }: any) => (
+const DashboardHeader = ({ navigation, isOnline, toggleOnline, greeting, userName, clinicName }: any) => (
   <View style={styles.header}>
     <View>
-      <Text style={styles.greeting}>{greeting}</Text>
+      <Text style={styles.greeting}>{clinicName ? `CLINIC: ${clinicName.toUpperCase()}` : greeting}</Text>
       <Text style={styles.docName}>{userName}</Text>
     </View>
 
@@ -130,14 +130,14 @@ export default function DashboardScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
-
-      <DashboardHeader
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
+      <DashboardHeader 
         navigation={navigation}
         isOnline={isOnline}
         toggleOnline={toggleOnline}
         greeting={getGreeting()}
         userName={userName}
+        clinicName={activeClinic?.name}
       />
 
       <ScrollView

@@ -16,6 +16,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Animatable from "react-native-animatable";
 import { useQueueStore } from "../../store/queueStore";
 import { COLORS } from "../../theme";
+import { api } from "../../services/api";
 
 // --- MINIMAL HEADER ---
 const DashboardHeader = ({ navigation, isOnline, toggleOnline, greeting, userName }: any) => (
@@ -117,8 +118,9 @@ export default function DashboardScreen({ navigation }: any) {
                 Alert.alert("Success", newStatus ? "Emergency broadcasted." : "Operations resumed.");
                 fetchMyClinics(); // Refresh clinic state
               }
-            } catch (err) {
-              Alert.alert("Error", "Failed to broadcast.");
+            } catch (err: any) {
+              const msg = err.response?.data?.error || err.message || "Unknown error";
+              Alert.alert("Error", `Failed to broadcast. ${msg}`);
             }
           },
         },

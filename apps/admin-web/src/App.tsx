@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard"; // <--- IMPORT THIS
+import Dashboard from "./pages/Dashboard"; 
 import PharmacyDashboard from "./pages/PharmacyDashboard";
+import DoctorDashboard from "./pages/DoctorDashboard";
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem("token");
@@ -18,7 +19,7 @@ function App() {
           path="/dashboard"
           element={
             <PrivateRoute>
-              <Dashboard /> {/* <--- USE IT HERE */}
+              <Dashboard />
             </PrivateRoute>
           }
         />
@@ -28,6 +29,15 @@ function App() {
           element={
             <PrivateRoute>
               <PharmacyDashboard />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/doctor/:clinicId"
+          element={
+            <PrivateRoute>
+              <DoctorDashboard />
             </PrivateRoute>
           }
         />

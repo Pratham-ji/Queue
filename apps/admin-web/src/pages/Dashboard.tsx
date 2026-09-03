@@ -35,11 +35,12 @@ interface Clinic {
 export default function Dashboard() {
   const navigate = useNavigate();
   const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [myClinics, setMyClinics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // FIX: This ensures 'fetchPending' is actually used
   useEffect(() => {
     fetchPending();
+    fetchMyClinics();
   }, []);
 
   const fetchPending = async () => {
@@ -53,10 +54,22 @@ export default function Dashboard() {
       );
       setClinics(res.data.data);
     } catch {
-      // FIX: Use a single underscore '_' to tell ESLint this catch variable is ignored
       console.error("Fetch failed");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMyClinics = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(
+        "http://13.201.230.245:5001/api/provider/my-clinics",
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setMyClinics(res.data.data);
+    } catch {
+      console.error("Failed to fetch my clinics");
     }
   };
 
@@ -102,14 +115,70 @@ export default function Dashboard() {
         <div className="text-center py-20 animate-pulse text-slate-500">
           Querying AWS RDS...
         </div>
-      ) : clinics.length === 0 ? (
-        <div className="text-center py-20 bg-slate-800/30 rounded-xl border border-dashed border-slate-700">
-          <CheckCircle className="mx-auto h-12 w-12 text-green-500 mb-4" />
-          <h3 className="text-xl font-semibold">No Pending Requests</h3>
-        </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {clinics.map((clinic) => (
+        <>
+          {/* MY CLINICS SECTION (For Doctors/Pharmacy Staff) */}
+          {myClinics.length > 0 && (
+            <div className="mb-10">
+              <h2 className="text-xl font-bold text-emerald-400 mb-4 flex items-center gap-2">
+                <Activity size={24} /> My Active Clinics (Pharmacy Desk)
+              </h2>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {myClinics.map((clinic) => (
+                  <div
+                    key={clinic.id}
+                    className="bg-slate-800 rounded-2xl p-6 border border-emerald-500/30 hover:border-emerald-400 transition-all shadow-lg shadow-emerald-500/5"
+                  >
+                    <div className="flex justify-between mb-4">
+                      <Building2 className="text-emerald-400" size={28} />
+                      <span className="bg-emerald-500/10 text-emerald-400 text-[10px] font-black px-2 py-1 rounded border border-emerald-500/20">
+                        VERIFIED
+                      </span>
+                    </div>
+                    <h3 className="text-xl font-bold mb-1">{clinic.name}</h3>
+                    <p className="text-sm text-slate-400 mb-6 flex items-center gap-1">
+                      <MapPin size={14} /> {clinic.city || "Clinic Location"}
+                    </p>
+                    
+                    <div className="space-y-3">
+                      <button 
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/doctor/${clinic.id}`);
+                        }}
+                      >
+                        <Activity size={18} /> Open Doctor Desk
+                      </button>
+                      <button 
+                        className="w-full bg-emerald-900/50 hover:bg-emerald-800 text-emerald-400 border border-emerald-500/30 font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/pharmacy/${clinic.id}`);
+                        }}
+                      >
+                        <ExternalLink size={18} /> Open Pharmacy Desk
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ADMIN VAULT SECTION (Pending Verifications) */}
+          <h2 className="text-xl font-bold text-slate-300 mb-4 flex items-center gap-2">
+            <ShieldCheck size={24} /> Pending Approvals
+          </h2>
+
+          {clinics.length === 0 ? (
+            <div className="text-center py-20 bg-slate-800/30 rounded-xl border border-dashed border-slate-700">
+              <CheckCircle className="mx-auto h-12 w-12 text-green-500 mb-4" />
+              <h3 className="text-xl font-semibold">No Pending Requests</h3>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {clinics.map((clinic) => (
             <div
               key={clinic.id}
               className="bg-slate-800 rounded-2xl p-6 border border-slate-700 hover:border-blue-500/50 transition-all"
@@ -192,7 +261,9 @@ export default function Dashboard() {
               </button>
             </div>
           ))}
-        </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

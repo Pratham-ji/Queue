@@ -7,6 +7,7 @@ import {
   switchClinic,
   getProviderProfile,
   toggleEmergency,
+  toggleOnlineStatus,
 } from "../controllers/marketplace.controller";
 import { getProviderAnalytics } from "../controllers/analytics.controller";
 
@@ -19,5 +20,6 @@ router.post("/switch-clinic", requireAuth, requireRole(["PROVIDER", "ADMIN"]), s
 router.get("/profile", requireAuth, getProviderProfile);
 router.get("/analytics", requireAuth, requireRole(["PROVIDER", "ADMIN"]), getProviderAnalytics);
 router.post("/emergency", requireAuth, requireRole(["PROVIDER", "ADMIN"]), toggleEmergency);
+router.post("/online", requireAuth, requireRole(["PROVIDER", "ADMIN"]), toggleOnlineStatus);
 
 export default router;

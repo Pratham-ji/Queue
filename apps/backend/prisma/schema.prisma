@@ -58,6 +58,7 @@ model Clinic {
   // --- EMERGENCY STATUS ---
   isEmergencyPause Boolean @default(false)
   emergencyMessage String?
+  isOnline         Boolean @default(false)
   // ------------------------
 
   createdAt DateTime @default(now())

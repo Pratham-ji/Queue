@@ -227,3 +227,36 @@ export const toggleEmergency = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ success: false, error: "Server Error" });
   }
 };
+
+export const toggleOnlineStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { clinicId, isOnline } = req.body;
+
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    if (!clinicId) return res.status(400).json({ error: "clinicId is required" });
+
+    const membership = await prisma.clinicMember.findUnique({
+      where: { userId_clinicId: { userId, clinicId } },
+    });
+
+    if (!membership || !["OWNER", "ADMIN", "DOCTOR"].includes(membership.role)) {
+      return res.status(403).json({ error: "No permission" });
+    }
+
+    const clinic = await prisma.clinic.update({
+      where: { id: clinicId },
+      data: { isOnline },
+    });
+
+    const io = req.app.get("io");
+    if (io) {
+      io.emit(`clinic_online_${clinicId}`, { isOnline });
+    }
+
+    res.json({ success: true, data: clinic });
+  } catch (error) {
+    console.error("toggleOnline error:", error);
+    res.status(500).json({ success: false, error: "Server Error" });
+  }
+};

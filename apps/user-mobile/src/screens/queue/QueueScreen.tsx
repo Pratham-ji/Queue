@@ -50,6 +50,7 @@ export default function QueueScreen({ route }: any) {
     estimatedWait,
     currentServingToken,
     isOffline,
+    isEmergencyPause,
   } = useUserQueueStore();
 
   // Accept clinicId from navigation params (from HospitalDetails)
@@ -110,23 +111,36 @@ export default function QueueScreen({ route }: any) {
           />
         }
       >
-        {/* DOCTOR CARD */}
+        {/* CLINIC / DOCTOR CARD */}
         <View style={styles.doctorCard}>
           <View style={styles.docRow}>
             <View style={styles.docAvatar}>
-              <Ionicons name="medkit" size={24} color={COLORS.primary} />
+              <Ionicons name="business" size={24} color={COLORS.primary} />
             </View>
             <View>
-              <Text style={styles.docName}>{clinicName}</Text>
-              <Text style={styles.docSub}>{activeClinicId ? "Queue Active" : "Select a clinic to join"}</Text>
+              <Text style={styles.docName}>{clinicName || "Queue Dashboard"}</Text>
+              <Text style={styles.docSub}>{activeClinicId ? "Live Queue Tracker" : "Select a clinic to join"}</Text>
             </View>
           </View>
-          <View style={styles.statusPill}>
-            <View style={styles.statusDot} />
-            <Text style={styles.statusText}>
-              {currentServingToken
-                ? `Serving Token #${currentServingToken}`
-                : activeClinicId ? "Clinic is Live" : "No Clinic Selected"}
+          <View style={[
+            styles.statusPill, 
+            isOffline ? { backgroundColor: "#FEE2E2" } : 
+            isEmergencyPause ? { backgroundColor: "#FEF3C7" } : {}
+          ]}>
+            <View style={[
+              styles.statusDot, 
+              isOffline ? { backgroundColor: "#EF4444" } : 
+              isEmergencyPause ? { backgroundColor: "#F59E0B" } : {}
+            ]} />
+            <Text style={[
+              styles.statusText,
+              isOffline ? { color: "#991B1B" } : 
+              isEmergencyPause ? { color: "#92400E" } : {}
+            ]}>
+              {!activeClinicId ? "No Clinic Selected" :
+               isOffline ? "Doctor is Offline" :
+               isEmergencyPause ? "Queue Paused (Emergency)" :
+               currentServingToken ? `Serving Token #${currentServingToken}` : "Clinic is Live"}
             </Text>
           </View>
         </View>

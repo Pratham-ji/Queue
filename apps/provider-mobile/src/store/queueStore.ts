@@ -151,12 +151,18 @@ export const useQueueStore = create<QueueState>((set, get) => ({
   },
 
   // 2. GO ONLINE & CONNECT SOCKET
-  toggleOnline: () => {
+  toggleOnline: async () => {
     const { isOnline, activeClinicId } = get();
     if (!activeClinicId) return;
 
     const newState = !isOnline;
     set({ isOnline: newState });
+
+    try {
+      await api.post("/provider/online", { clinicId: activeClinicId, isOnline: newState });
+    } catch (e) {
+      if (__DEV__) console.error("Failed to toggle online:", e);
+    }
 
     if (newState) {
       if (!socket.connected) socket.connect();

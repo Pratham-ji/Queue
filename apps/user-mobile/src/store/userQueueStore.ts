@@ -184,6 +184,12 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
         emergencyMessage: data.emergencyMessage
       });
     });
+
+    // D. Clinic Online Status Update
+    socket.off(`clinic_online_${activeClinicId}`);
+    socket.on(`clinic_online_${activeClinicId}`, (data: { isOnline: boolean }) => {
+      set({ isOffline: !data.isOnline });
+    });
   },
 
   // 4. FORCE REFRESH (uses dynamic clinicId)
@@ -204,6 +210,7 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
           currentServingToken: current ? current.token : null,
           isEmergencyPause: clinic?.isEmergencyPause || false,
           emergencyMessage: clinic?.emergencyMessage || null,
+          isOffline: clinic ? !clinic.isOnline : false,
         });
 
         // Recalculate Position

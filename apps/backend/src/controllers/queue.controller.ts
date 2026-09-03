@@ -21,7 +21,7 @@ export const getQueue = async (req: Request, res: Response) => {
 
     const clinic = await prisma.clinic.findUnique({
       where: { id: clinicId },
-      select: { isEmergencyPause: true, emergencyMessage: true }
+      select: { isEmergencyPause: true, emergencyMessage: true, isOnline: true }
     });
 
     const current = await prisma.patient.findFirst({

@@ -29,6 +29,7 @@ interface UserQueueState {
   estimatedWait: number; // In minutes
   expoPushToken: string | null;
   isOffline: boolean;
+  isClinicOffline: boolean;
   isEmergencyPause: boolean;
   emergencyMessage: string | null;
 
@@ -57,6 +58,7 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
   estimatedWait: 0,
   expoPushToken: null,
   isOffline: false,
+  isClinicOffline: false,
   isEmergencyPause: false,
   emergencyMessage: null,
 
@@ -188,7 +190,7 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
     // D. Clinic Online Status Update
     socket.off(`clinic_online_${activeClinicId}`);
     socket.on(`clinic_online_${activeClinicId}`, (data: { isOnline: boolean }) => {
-      set({ isOffline: !data.isOnline });
+      set({ isClinicOffline: !data.isOnline });
     });
   },
 
@@ -210,7 +212,7 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
           currentServingToken: current ? current.token : null,
           isEmergencyPause: clinic?.isEmergencyPause || false,
           emergencyMessage: clinic?.emergencyMessage || null,
-          isOffline: clinic ? !clinic.isOnline : false,
+          isClinicOffline: clinic ? !clinic.isOnline : false,
         });
 
         // Recalculate Position

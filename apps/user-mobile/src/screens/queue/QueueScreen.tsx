@@ -49,7 +49,8 @@ export default function QueueScreen({ route }: any) {
     loadSession,
     estimatedWait,
     currentServingToken,
-    isOffline,
+    isOffline, // NetInfo Network Offline
+    isClinicOffline,
     isEmergencyPause,
   } = useUserQueueStore();
 
@@ -124,21 +125,21 @@ export default function QueueScreen({ route }: any) {
           </View>
           <View style={[
             styles.statusPill, 
-            isOffline ? { backgroundColor: "#FEE2E2" } : 
+            isClinicOffline ? { backgroundColor: "#FEE2E2" } : 
             isEmergencyPause ? { backgroundColor: "#FEF3C7" } : {}
           ]}>
             <View style={[
               styles.statusDot, 
-              isOffline ? { backgroundColor: "#EF4444" } : 
+              isClinicOffline ? { backgroundColor: "#EF4444" } : 
               isEmergencyPause ? { backgroundColor: "#F59E0B" } : {}
             ]} />
             <Text style={[
               styles.statusText,
-              isOffline ? { color: "#991B1B" } : 
+              isClinicOffline ? { color: "#991B1B" } : 
               isEmergencyPause ? { color: "#92400E" } : {}
             ]}>
               {!activeClinicId ? "No Clinic Selected" :
-               isOffline ? "Doctor is Offline" :
+               isClinicOffline ? "Doctor is Offline" :
                isEmergencyPause ? "Queue Paused (Emergency)" :
                currentServingToken ? `Serving Token #${currentServingToken}` : "Clinic is Live"}
             </Text>

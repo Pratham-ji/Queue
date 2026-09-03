@@ -27,9 +27,9 @@ export const getQueue = async (req: Request, res: Response) => {
     const current = await prisma.patient.findFirst({
       where: {
         clinicId,
-        status: "SERVED",
+        status: "SERVING",
       },
-      orderBy: { updatedAt: "desc" },
+      orderBy: { servedTime: "desc" },
     });
 
     if (queue.length === 0 && !current) {

@@ -200,7 +200,7 @@ export const toggleEmergency = async (req: AuthRequest, res: Response) => {
       where: { userId_clinicId: { userId, clinicId } },
     });
 
-    if (!membership || !["OWNER", "ADMIN"].includes(membership.role)) {
+    if (!membership || !["OWNER", "ADMIN", "DOCTOR"].includes(membership.role)) {
       return res.status(403).json({ error: "You don't have permission to toggle emergency status" });
     }
 

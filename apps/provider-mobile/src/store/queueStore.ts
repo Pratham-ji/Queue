@@ -140,7 +140,10 @@ export const useQueueStore = create<QueueState>((set, get) => ({
 
       const res = await api.get(`/queue/${activeClinicId}`);
       if (res.data.success) {
-        set({ queue: res.data.data });
+        set({ 
+          queue: res.data.data,
+          currentPatient: res.data.current || null
+        });
       }
     } catch (error) {
       if (__DEV__) console.error("Failed to fetch queue:", error);

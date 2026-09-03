@@ -73,8 +73,8 @@ app.use(helmet());
 // Rate limiting — 100 requests per 15 minutes per IP
 const globalLimiter = ratelimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: "Too many requests from this IP. Please try again later.",
+  max: 3000,
+  message: { error: "Too many requests from this IP. Please try again later.", success: false },
 });
 app.use(globalLimiter);
 

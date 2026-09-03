@@ -15,7 +15,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Animatable from "react-native-animatable";
-import Animated, { Layout } from "react-native-reanimated";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useUserQueueStore } from "../../store/userQueueStore";
 
@@ -134,7 +133,7 @@ export default function QueueScreen({ route }: any) {
 
         {queueStatus === "JOINED" ? (
           // 🎫 ZOMATO-STYLE ORDER TRACKER
-          <Animated.View layout={Layout.springify()} style={styles.trackerContainer}>
+          <Animatable.View animation="fadeInUp" duration={500} style={styles.trackerContainer}>
             <View style={styles.ticketHeader}>
               <Text style={styles.ticketLabel}>YOUR TOKEN</Text>
               <Text style={styles.bigToken}>#{activeToken}</Text>
@@ -177,14 +176,14 @@ export default function QueueScreen({ route }: any) {
 
               {/* STEP 3: Now Serving */}
               <View style={styles.timelineStep}>
-                <Animated.View 
+                <View 
                   style={[
                     styles.stepCircle, 
                     { backgroundColor: peopleAhead === 0 ? COLORS.primary : COLORS.border }
                   ]}
                 >
                   {peopleAhead === 0 && <Ionicons name="checkmark" size={16} color="#FFF" />}
-                </Animated.View>
+                </View>
                 <View style={styles.stepContent}>
                   <Text style={[styles.stepTitle, { color: peopleAhead === 0 ? COLORS.text : COLORS.subText }]}>Now Serving</Text>
                   <Text style={styles.stepDesc}>{peopleAhead === 0 ? "Please head into the doctor's room." : ""}</Text>
@@ -205,7 +204,7 @@ export default function QueueScreen({ route }: any) {
             <TouchableOpacity style={styles.cancelBtn} onPress={leaveQueue}>
               <Text style={styles.cancelText}>Cancel Ticket</Text>
             </TouchableOpacity>
-          </Animated.View>
+          </Animatable.View>
         ) : (
           // 📝 JOIN FORM
           <Animatable.View

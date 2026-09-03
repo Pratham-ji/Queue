@@ -74,7 +74,7 @@ export default function PharmacyDashboard() {
       
       const all: any[] = res.data.data;
       setPending(all.filter((p) => p.pharmacyStatus === "PENDING"));
-      setFulfilled(all.filter((p) => p.pharmacyStatus === "FULFILLED"));
+      setFulfilled(all.filter((p) => p.pharmacyStatus === "COMPLETED"));
     } catch (error) {
       console.error("Failed to fetch prescriptions", error);
     } finally {

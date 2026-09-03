@@ -150,7 +150,7 @@ export const verifyPharmacyOtp = async (req: AuthRequest, res: Response) => {
     }
 
     const prescription = await prisma.prescription.findUnique({
-      where: { id },
+      where: { id: id as string },
       include: {
         patient: true,
       },
@@ -160,8 +160,8 @@ export const verifyPharmacyOtp = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, error: "Prescription not found" });
     }
 
-    if (prescription.pharmacyStatus === "FULFILLED") {
-      return res.status(400).json({ success: false, error: "Prescription already fulfilled" });
+    if (prescription.pharmacyStatus === "COMPLETED") {
+      return res.status(400).json({ success: false, error: "Prescription already completed" });
     }
 
     if (prescription.otpCode !== otpCode) {
@@ -169,9 +169,9 @@ export const verifyPharmacyOtp = async (req: AuthRequest, res: Response) => {
     }
 
     const updatedPrescription = await prisma.prescription.update({
-      where: { id },
+      where: { id: id as string },
       data: {
-        pharmacyStatus: "FULFILLED",
+        pharmacyStatus: "COMPLETED",
       },
       include: {
         patient: true,
@@ -208,7 +208,7 @@ export const getPatientPrescription = async (req: Request, res: Response) => {
         clinicId: String(clinicId),
         token: parseInt(String(token)),
       },
-      orderBy: { createdAt: "desc" }
+      orderBy: { arrivalTime: "desc" }
     });
 
     if (!patient) {

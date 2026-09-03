@@ -28,6 +28,7 @@ interface UserQueueState {
   currentServingToken: number | null;
   estimatedWait: number; // In minutes
   expoPushToken: string | null;
+  isOffline: boolean;
 
   setClinic: (clinicId: string) => void;
   joinQueue: (name: string, phone: string) => Promise<void>;
@@ -37,7 +38,11 @@ interface UserQueueState {
   refreshData: () => Promise<void>;
   setupAppStateListener: () => () => void;
   registerPushToken: () => Promise<void>;
+  setOfflineStatus: (status: boolean) => void;
 }
+
+// Keep a polling timer reference outside state to prevent re-renders on every tick
+let pollingTimer: NodeJS.Timeout | null = null;
 
 export const useUserQueueStore = create<UserQueueState>((set, get) => ({
   isLoading: false,
@@ -120,10 +125,25 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
       socket.emit("join_clinic", activeClinicId);
     }
 
+    // Manage polling on connection drops
+    socket.off("disconnect");
+    socket.on("disconnect", () => {
+      if (__DEV__) console.warn("Socket disconnected — starting polling fallback");
+      if (!pollingTimer) {
+        pollingTimer = setInterval(() => {
+          if (!socket.connected) get().refreshData();
+        }, 5000); // Poll every 5s
+      }
+    });
+
     // Re-join room on reconnect (critical for background recovery)
     socket.off("reconnect");
     socket.on("reconnect", () => {
-      if (__DEV__) console.log("Socket reconnected — re-syncing");
+      if (__DEV__) console.log("Socket reconnected — stopping polling & re-syncing");
+      if (pollingTimer) {
+        clearInterval(pollingTimer);
+        pollingTimer = null;
+      }
       const { activeClinicId: currentClinic } = get();
       if (currentClinic) {
         socket.emit("join_clinic", currentClinic);
@@ -217,4 +237,7 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
     const subscription = AppState.addEventListener("change", handleAppStateChange);
     return () => subscription.remove();
   },
+
+  // 7. OFFLINE STATUS
+  setOfflineStatus: (status: boolean) => set({ isOffline: status }),
 }));

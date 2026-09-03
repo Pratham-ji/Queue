@@ -34,17 +34,25 @@ const COLORS = {
   border: "#334155",
 };
 
+import NetInfo from "@react-native-community/netinfo";
+import { useUserQueueStore } from "../../store/userQueueStore";
+
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const [clinics, setClinics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { isOffline, setOfflineStatus } = useUserQueueStore();
 
   useEffect(() => {
+    // Network listener
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setOfflineStatus(!state.isConnected);
+    });
+
     const fetchData = async () => {
       try {
         const clinicRes = await api.get("/hospital/clinics");
         if (clinicRes.data.success) {
-          // Sort by rating or default logic
           const fetched = clinicRes.data.data;
           setClinics(fetched);
         }
@@ -55,9 +63,19 @@ export default function HomeScreen() {
       }
     };
     fetchData();
+
+    return () => unsubscribe();
   }, []);
 
-  const handleQuickJoin = (clinicId: string) => {
+  const handleQuickJoin = (clinicId: string, isEmergencyPause: boolean) => {
+    if (isOffline) {
+      alert("You are offline. Reconnecting...");
+      return;
+    }
+    if (isEmergencyPause) {
+      alert("This clinic is currently on an emergency pause and cannot accept new patients.");
+      return;
+    }
     // Pass the specific clinicId directly to the Queue Screen for instant joining
     navigation.navigate("Queue", { clinicId });
   };
@@ -76,20 +94,29 @@ export default function HomeScreen() {
       >
         <Image source={{ uri: clinic.image || "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2753&auto=format&fit=crop" }} style={styles.heroImage} />
         <LinearGradient
-          colors={["transparent", "rgba(15, 23, 42, 0.95)"]}
+          colors={clinic.isEmergencyPause ? ["rgba(239, 68, 68, 0.4)", "rgba(15, 23, 42, 0.95)"] : ["transparent", "rgba(15, 23, 42, 0.95)"]}
           style={styles.heroGradient}
         />
         
         <View style={styles.heroContent}>
           <View style={styles.heroTopRow}>
-            <View style={styles.glassBadge}>
-              <Ionicons name="star" size={12} color="#FBBF24" />
-              <Text style={styles.badgeText}>{clinic.rating || "4.9"}</Text>
-            </View>
-            <View style={[styles.glassBadge, { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
-              <Ionicons name="flash" size={12} color={COLORS.primary} />
-              <Text style={[styles.badgeText, { color: COLORS.primary }]}>Fast Track</Text>
-            </View>
+            {clinic.isEmergencyPause ? (
+              <View style={[styles.glassBadge, { backgroundColor: 'rgba(239, 68, 68, 0.9)' }]}>
+                <Ionicons name="warning" size={12} color="#FFF" />
+                <Text style={[styles.badgeText, { color: "#FFF", fontWeight: "700" }]}>EMERGENCY PAUSE</Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.glassBadge}>
+                  <Ionicons name="star" size={12} color="#FBBF24" />
+                  <Text style={styles.badgeText}>{clinic.rating || "4.9"}</Text>
+                </View>
+                <View style={[styles.glassBadge, { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
+                  <Ionicons name="flash" size={12} color={COLORS.primary} />
+                  <Text style={[styles.badgeText, { color: COLORS.primary }]}>Fast Track</Text>
+                </View>
+              </>
+            )}
           </View>
           
           <Text style={styles.heroTitle} numberOfLines={1}>{clinic.name}</Text>
@@ -97,17 +124,32 @@ export default function HomeScreen() {
             <Ionicons name="location" size={12} /> {clinic.address}, {clinic.city}
           </Text>
 
+          {/* Doctor Avatars (Nested Doctors) */}
+          {clinic.doctors && clinic.doctors.length > 0 && (
+            <View style={styles.doctorsRow}>
+              {clinic.doctors.slice(0, 3).map((doc: any, i: number) => (
+                <Image key={doc.id} source={{ uri: doc.image }} style={[styles.doctorAvatar, { marginLeft: i > 0 ? -10 : 0 }]} />
+              ))}
+              {clinic.doctors.length > 3 && (
+                <View style={styles.doctorAvatarMore}>
+                  <Text style={styles.doctorAvatarMoreText}>+{clinic.doctors.length - 3}</Text>
+                </View>
+              )}
+            </View>
+          )}
+
           <TouchableOpacity 
-            style={styles.quickJoinBtn}
-            onPress={() => handleQuickJoin(clinic.id)}
+            style={[styles.quickJoinBtn, clinic.isEmergencyPause && { opacity: 0.5 }]}
+            onPress={() => handleQuickJoin(clinic.id, clinic.isEmergencyPause)}
+            disabled={clinic.isEmergencyPause}
           >
             <LinearGradient
-              colors={[COLORS.primary, COLORS.primaryDark]}
+              colors={clinic.isEmergencyPause ? ["#64748B", "#475569"] : [COLORS.primary, COLORS.primaryDark]}
               start={{x:0, y:0}} end={{x:1, y:1}}
               style={styles.quickJoinGradient}
             >
-              <Text style={styles.quickJoinText}>Join Queue Now</Text>
-              <Ionicons name="arrow-forward" size={16} color="#FFF" />
+              <Text style={styles.quickJoinText}>{clinic.isEmergencyPause ? "PAUSED" : "Join Queue Now"}</Text>
+              <Ionicons name={clinic.isEmergencyPause ? "lock-closed" : "arrow-forward"} size={16} color="#FFF" />
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -305,7 +347,36 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: "#FFF", fontSize: 12, fontWeight: "700" },
   heroTitle: { fontSize: 24, fontWeight: "800", color: "#FFF", marginBottom: 4 },
-  heroSub: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginBottom: 16 },
+  heroSub: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginBottom: 12 },
+  
+  doctorsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  doctorAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: COLORS.surface,
+  },
+  doctorAvatarMore: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: COLORS.surface,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: -10,
+  },
+  doctorAvatarMoreText: {
+    color: "#FFF",
+    fontSize: 10,
+    fontWeight: "700",
+  },
   
   quickJoinBtn: {
     width: "100%",

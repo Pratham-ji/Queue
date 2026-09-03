@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Animatable from "react-native-animatable";
+import Animated, { Layout } from "react-native-reanimated";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useUserQueueStore } from "../../store/userQueueStore";
 
@@ -49,6 +50,7 @@ export default function QueueScreen({ route }: any) {
     loadSession,
     estimatedWait,
     currentServingToken,
+    isOffline,
   } = useUserQueueStore();
 
   // Accept clinicId from navigation params (from HospitalDetails)
@@ -69,6 +71,13 @@ export default function QueueScreen({ route }: any) {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
+
+      {isOffline && (
+        <View style={styles.offlineBanner}>
+          <ActivityIndicator size="small" color="#FFF" style={{ marginRight: 8 }} />
+          <Text style={styles.offlineText}>Offline - Reconnecting...</Text>
+        </View>
+      )}
 
       {/* 🟢 HEADER WITH SMART BACK BUTTON */}
       <View style={styles.header}>
@@ -124,50 +133,74 @@ export default function QueueScreen({ route }: any) {
         </View>
 
         {queueStatus === "JOINED" ? (
-          // 🎫 ACTIVE TICKET DASHBOARD
-          <Animatable.View animation="fadeInUp" duration={500}>
-            <View style={styles.ticketCard}>
-              <View style={styles.ticketTop}>
-                <Text style={styles.ticketLabel}>YOUR TOKEN</Text>
-                <View style={styles.liveBadge}>
-                  <Text style={styles.liveText}>LIVE</Text>
-                </View>
-              </View>
-
+          // 🎫 ZOMATO-STYLE ORDER TRACKER
+          <Animated.View layout={Layout.springify()} style={styles.trackerContainer}>
+            <View style={styles.ticketHeader}>
+              <Text style={styles.ticketLabel}>YOUR TOKEN</Text>
               <Text style={styles.bigToken}>#{activeToken}</Text>
-
-              <View style={styles.divider} />
-
-              <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statVal}>{peopleAhead}</Text>
-                  <Text style={styles.statLabel}>People Ahead</Text>
+              <View style={styles.statsBadgeRow}>
+                <View style={styles.glassBadge}>
+                  <Ionicons name="people" size={14} color="#FFF" />
+                  <Text style={styles.badgeText}>{peopleAhead} Ahead</Text>
                 </View>
-                <View style={styles.vertLine} />
-                <View style={styles.statItem}>
-                  <Text style={styles.statVal}>~{estimatedWait}m</Text>
-                  <Text style={styles.statLabel}>Est. Wait</Text>
+                <View style={[styles.glassBadge, { backgroundColor: "rgba(16, 185, 129, 0.2)" }]}>
+                  <Ionicons name="time" size={14} color={COLORS.primary} />
+                  <Text style={[styles.badgeText, { color: COLORS.primary }]}>~{estimatedWait}m Wait</Text>
                 </View>
               </View>
             </View>
 
-            {/* ALERT BOX */}
-            {peopleAhead === 0 ? (
-              <Animatable.View
-                animation="pulse"
-                iterationCount="infinite"
-                style={styles.alertBox}
-              >
-                <Ionicons name="notifications" size={22} color="#FFF" />
-                <Text style={styles.alertText}>
-                  It's your turn! Please go inside.
-                </Text>
-              </Animatable.View>
-            ) : (
-              <Text style={styles.helperText}>
-                We will notify you when your turn is near.
-              </Text>
-            )}
+            <View style={styles.trackerTimeline}>
+              {/* STEP 1: In Queue */}
+              <View style={styles.timelineStep}>
+                <View style={[styles.stepCircle, { backgroundColor: COLORS.primary }]}>
+                  <Ionicons name="checkmark" size={16} color="#FFF" />
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={styles.stepTitle}>In Queue</Text>
+                  <Text style={styles.stepDesc}>You are currently waiting.</Text>
+                </View>
+              </View>
+              <View style={[styles.timelineLine, { backgroundColor: peopleAhead <= 1 ? COLORS.primary : COLORS.border }]} />
+
+              {/* STEP 2: Next Up */}
+              <View style={styles.timelineStep}>
+                <View style={[styles.stepCircle, { backgroundColor: peopleAhead <= 1 ? COLORS.primary : COLORS.border }]}>
+                  {peopleAhead <= 1 && <Ionicons name="checkmark" size={16} color="#FFF" />}
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={[styles.stepTitle, { color: peopleAhead <= 1 ? COLORS.text : COLORS.subText }]}>Next Up</Text>
+                  <Text style={styles.stepDesc}>{peopleAhead <= 1 ? "Get ready, you're position 2!" : "Waiting for your turn..."}</Text>
+                </View>
+              </View>
+              <View style={[styles.timelineLine, { backgroundColor: peopleAhead === 0 ? COLORS.primary : COLORS.border }]} />
+
+              {/* STEP 3: Now Serving */}
+              <View style={styles.timelineStep}>
+                <Animated.View 
+                  style={[
+                    styles.stepCircle, 
+                    { backgroundColor: peopleAhead === 0 ? COLORS.primary : COLORS.border }
+                  ]}
+                >
+                  {peopleAhead === 0 && <Ionicons name="checkmark" size={16} color="#FFF" />}
+                </Animated.View>
+                <View style={styles.stepContent}>
+                  <Text style={[styles.stepTitle, { color: peopleAhead === 0 ? COLORS.text : COLORS.subText }]}>Now Serving</Text>
+                  <Text style={styles.stepDesc}>{peopleAhead === 0 ? "Please head into the doctor's room." : ""}</Text>
+                </View>
+              </View>
+              <View style={[styles.timelineLine, { backgroundColor: COLORS.border }]} />
+
+              {/* STEP 4: Completed */}
+              <View style={styles.timelineStep}>
+                <View style={[styles.stepCircle, { backgroundColor: COLORS.border }]} />
+                <View style={styles.stepContent}>
+                  <Text style={[styles.stepTitle, { color: COLORS.subText }]}>Completed</Text>
+                  <Text style={styles.stepDesc}></Text>
+                </View>
+              </View>
+            </View>
 
             <TouchableOpacity style={styles.cancelBtn} onPress={leaveQueue}>
               <Text style={styles.cancelText}>Cancel Ticket</Text>
@@ -215,6 +248,19 @@ export default function QueueScreen({ route }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   scrollContent: { padding: 20 },
+  
+  offlineBanner: {
+    backgroundColor: COLORS.error,
+    padding: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  offlineText: {
+    color: "#FFF",
+    fontWeight: "600",
+    fontSize: 14,
+  },
 
   header: {
     flexDirection: "row",
@@ -279,55 +325,88 @@ const styles = StyleSheet.create({
   },
   statusText: { fontSize: 12, fontWeight: "600", color: COLORS.dark },
 
-  // TICKET CARD
-  ticketCard: {
-    backgroundColor: COLORS.dark,
+  // TRACKER UI (Zomato-Style)
+  trackerContainer: {
+    backgroundColor: COLORS.white,
     borderRadius: 24,
     padding: 24,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  ticketTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  ticketHeader: {
     alignItems: "center",
+    marginBottom: 32,
   },
   ticketLabel: {
-    color: "rgba(255,255,255,0.7)",
+    color: COLORS.subText,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 1,
   },
-  liveBadge: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  liveText: { color: "#FFF", fontSize: 10, fontWeight: "700" },
   bigToken: {
-    fontSize: 80,
+    fontSize: 64,
     fontWeight: "800",
-    color: "#FFF",
-    textAlign: "center",
-    marginVertical: 20,
+    color: COLORS.text,
+    marginVertical: 8,
   },
-  divider: {
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    marginBottom: 20,
+  statsBadgeRow: {
+    flexDirection: "row",
+    gap: 8,
   },
-  statsRow: { flexDirection: "row", justifyContent: "space-between" },
-  statItem: { alignItems: "center", flex: 1 },
-  vertLine: {
-    width: 1,
-    height: "100%",
-    backgroundColor: "rgba(255,255,255,0.1)",
+  glassBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.text,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 4,
   },
-  statVal: { fontSize: 24, fontWeight: "700", color: "#FFF" },
-  statLabel: { fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 4 },
+  badgeText: { color: "#FFF", fontSize: 13, fontWeight: "700" },
+  
+  trackerTimeline: {
+    paddingLeft: 10,
+  },
+  timelineStep: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  stepCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+    zIndex: 2,
+  },
+  stepContent: {
+    marginLeft: 16,
+    flex: 1,
+  },
+  stepTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  stepDesc: {
+    fontSize: 14,
+    color: COLORS.subText,
+    lineHeight: 20,
+  },
+  timelineLine: {
+    width: 2,
+    height: 40,
+    marginLeft: 13,
+    marginTop: -8,
+    marginBottom: -8,
+    zIndex: 1,
+  },
 
   // FORM CARD
   formCard: {

@@ -9,6 +9,7 @@ import {
   Switch,
   Alert,
   Dimensions,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -114,6 +115,15 @@ export default function DashboardScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={false} // UI will just spin briefly, state is instant enough
+            onRefresh={async () => {
+              await fetchMyClinics();
+              await fetchQueue();
+            }}
+          />
+        }
       >
         {/* CLINIC SWITCHER (Only if > 1 clinic) */}
         {allClinics.length > 1 && (

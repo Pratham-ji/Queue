@@ -101,6 +101,8 @@ export const useQueueStore = create<QueueState>((set, get) => ({
         const primary = clinics.find((c) => c.isPrimary) || clinics[0];
         if (primary) {
           set({ activeClinicId: primary.id, activeClinic: primary });
+          if (!socket.connected) socket.connect();
+          socket.emit("join_clinic", primary.id);
         }
       }
     } catch (error) {
@@ -209,6 +211,17 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     socket.on("current_patient", (patient: Patient) => {
       set({ currentPatient: patient });
     });
+
+    const { activeClinicId } = get();
+    if (activeClinicId) {
+      socket.off(`clinic_emergency_${activeClinicId}`);
+      socket.on(`clinic_emergency_${activeClinicId}`, (data: { isEmergencyPause: boolean }) => {
+        const { activeClinic } = get();
+        if (activeClinic) {
+          set({ activeClinic: { ...activeClinic, isEmergencyPause: data.isEmergencyPause } });
+        }
+      });
+    }
 
     // Re-join room on reconnect (using dynamic ID)
     socket.off("reconnect");

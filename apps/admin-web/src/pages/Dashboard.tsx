@@ -46,7 +46,7 @@ export default function Dashboard() {
     try {
       const token = localStorage.getItem("token");
       const res = await axios.get(
-        "http://13.201.105.170:5001/api/admin/pending",
+        "http://13.201.230.245:5001/api/admin/pending",
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -64,7 +64,7 @@ export default function Dashboard() {
     try {
       const token = localStorage.getItem("token");
       await axios.patch(
-        `http://13.201.105.170:5001/api/admin/approve/${id}`,
+        `http://13.201.230.245:5001/api/admin/approve/${id}`,
         {},
         {
           headers: { Authorization: `Bearer ${token}` },

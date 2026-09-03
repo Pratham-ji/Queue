@@ -2,8 +2,8 @@ import axios from "axios";
 import { io, Socket } from "socket.io-client";
 
 // Environment-driven URLs — set in .env file
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5001";
-const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || "http://localhost:5001";
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://13.201.230.245:5001";
+const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || "http://13.201.230.245:5001";
 
 // 1. HTTP CLIENT
 export const api = axios.create({

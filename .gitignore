@@ -44,3 +44,6 @@ jwt.txt
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
+.terraform/
+*.tfstate
+*.tfstate.backup

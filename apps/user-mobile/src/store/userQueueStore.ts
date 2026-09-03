@@ -5,7 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppState, AppStateStatus } from "react-native";
 
 // Environment-driven Socket URL
-const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || "http://localhost:5001";
+const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || "http://13.201.230.245:5001";
 
 // Socket singleton with aggressive reconnection
 let socket: Socket = io(SOCKET_URL, {

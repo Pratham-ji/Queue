@@ -16,7 +16,7 @@ export default function Login() {
     try {
       // 1. Send Login Request
       // Note: We'll fix the URL to point to your AWS server later
-      const res = await axios.post("http://13.201.105.170:5001/api/auth/login", {
+      const res = await axios.post("http://13.201.230.245:5001/api/auth/login", {
         email,
         password,
       });

@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Environment-driven API URL — set in .env file
 // EXPO_PUBLIC_ prefix makes it available at build time in Expo
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5001";
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://13.201.230.245:5001";
 
 // 1. Create the Axios Instance
 export const api = axios.create({

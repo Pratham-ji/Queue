@@ -24,7 +24,7 @@ interface Prescription {
   };
 }
 
-const API_BASE = "http://13.201.105.170:5001";
+const API_BASE = "http://13.201.230.245:5001";
 
 export default function PharmacyDashboard() {
   const { clinicId } = useParams();

@@ -8,25 +8,31 @@ export const getMyThreads = async (req: AuthRequest, res: Response) => {
     const role = req.user?.role;
     if (!userId) return res.status(401).json({ success: false, error: "Unauthorized" });
 
-    let threads;
+    let threads: any[] = [];
+    
+    // If they are a PROVIDER, try to fetch their doctor profile threads
     if (role === "PROVIDER") {
-      // Find the doctor profile
       const doc = await prisma.doctorProfile.findUnique({ where: { userId } });
-      if (!doc) return res.status(404).json({ success: false, error: "Profile not found" });
-      
-      threads = await prisma.chatThread.findMany({
-        where: { doctorId: doc.id },
-        include: { user: { select: { id: true, name: true } } },
-        orderBy: { updatedAt: "desc" }
-      });
-    } else {
-      // Patient view
-      threads = await prisma.chatThread.findMany({
-        where: { userId },
-        include: { doctor: { select: { id: true, name: true, image: true } } },
-        orderBy: { updatedAt: "desc" }
-      });
+      if (doc) {
+        const docThreads = await prisma.chatThread.findMany({
+          where: { doctorId: doc.id },
+          include: { user: { select: { id: true, name: true } } },
+          orderBy: { updatedAt: "desc" }
+        });
+        threads = [...threads, ...docThreads];
+      }
     }
+
+    // Always fetch patient threads (a provider can also be a patient)
+    const patientThreads = await prisma.chatThread.findMany({
+      where: { userId },
+      include: { doctor: { select: { id: true, name: true, image: true } } },
+      orderBy: { updatedAt: "desc" }
+    });
+    threads = [...threads, ...patientThreads];
+
+    // Sort combined threads
+    threads.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
     res.json({ success: true, data: threads });
   } catch (error) {

@@ -87,7 +87,7 @@ export const createPrescription = async (req: AuthRequest, res: Response) => {
 // ==========================================
 export const getClinicPrescriptions = async (req: AuthRequest, res: Response) => {
   try {
-    const { clinicId } = req.params;
+    const clinicId = req.params.clinicId as string;
     const userId = req.user?.userId;
 
     if (!userId) {

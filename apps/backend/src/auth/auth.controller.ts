@@ -7,14 +7,6 @@ interface AuthenticatedUser {
   verified: boolean;
 }
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: AuthenticatedUser; // ✅ Specific type instead of any
-    }
-  }
-}
-
 export const verifyOtp = async (req : Request, res : Response) => {
   const user = req.user; // after OTP verified
 

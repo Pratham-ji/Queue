@@ -52,6 +52,7 @@ export default function QueueScreen({ route }: any) {
     isOffline, // NetInfo Network Offline
     isClinicOffline,
     isEmergencyPause,
+    activePrescription,
   } = useUserQueueStore();
 
   // Accept clinicId from navigation params (from HospitalDetails)
@@ -144,9 +145,38 @@ export default function QueueScreen({ route }: any) {
                currentServingToken ? `Serving Token #${currentServingToken}` : "Clinic is Live"}
             </Text>
           </View>
+          {__DEV__ && activeClinicId && (
+            <Text style={{ textAlign: "center", color: "red", fontSize: 10, marginTop: 4 }}>Clinic ID: {activeClinicId}</Text>
+          )}
         </View>
 
-        {queueStatus === "JOINED" ? (
+        {activePrescription ? (
+          // 💊 PRESCRIPTION READY (PHARMACY HANDOFF)
+          <Animatable.View animation="bounceIn" duration={800} style={styles.trackerContainer}>
+            <View style={[styles.ticketHeader, { backgroundColor: "#F0FDF4", borderRadius: 20, padding: 20, marginBottom: 20 }]}>
+              <Ionicons name="medical" size={40} color={COLORS.primary} style={{ marginBottom: 10 }} />
+              <Text style={[styles.ticketLabel, { color: COLORS.primary }]}>PRESCRIPTION READY</Text>
+              <Text style={{ fontSize: 16, textAlign: "center", color: COLORS.text, marginVertical: 10 }}>
+                Please proceed to the pharmacy and show this secure code to collect your medicines.
+              </Text>
+              <View style={{ backgroundColor: "#FFF", paddingHorizontal: 30, paddingVertical: 15, borderRadius: 15, borderWidth: 2, borderColor: COLORS.primary, borderStyle: "dashed", marginTop: 10 }}>
+                <Text style={{ fontSize: 42, fontWeight: "900", letterSpacing: 8, color: COLORS.primary, textAlign: "center" }}>
+                  {activePrescription.otpCode}
+                </Text>
+              </View>
+            </View>
+
+            <View style={{ backgroundColor: COLORS.inputBg, borderRadius: 16, padding: 20 }}>
+              <Text style={{ fontWeight: "700", marginBottom: 10, color: COLORS.text }}>Prescribed Medicines:</Text>
+              {activePrescription.medicines?.map((m: any, idx: number) => (
+                <View key={idx} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border }}>
+                  <Text style={{ fontWeight: "600", color: COLORS.text }}>{m.name}</Text>
+                  <Text style={{ color: COLORS.subText }}>{m.dosage} • {m.duration}</Text>
+                </View>
+              ))}
+            </View>
+          </Animatable.View>
+        ) : queueStatus === "JOINED" ? (
           // 🎫 ZOMATO-STYLE ORDER TRACKER
           <Animatable.View animation="fadeInUp" duration={500} style={styles.trackerContainer}>
             <View style={styles.ticketHeader}>

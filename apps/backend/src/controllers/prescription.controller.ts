@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../utils/prisma";
 import { AuthRequest } from "../middleware/auth.middleware";
+import crypto from "crypto";
 
 // ==========================================
 // 1. CREATE PRESCRIPTION
@@ -54,7 +55,10 @@ export const createPrescription = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, error: "Patient not found in this clinic" });
     }
 
-    // 3. Create the Prescription
+    // 3. Generate a secure 6-digit OTP for pharmacy release
+    const otpCode = crypto.randomInt(100000, 999999).toString();
+
+    // 4. Create the Prescription
     const newPrescription = await prisma.prescription.create({
       data: {
         medicines,
@@ -62,6 +66,8 @@ export const createPrescription = async (req: AuthRequest, res: Response) => {
         patientId,
         clinicId,
         doctorId,
+        otpCode,
+        pharmacyStatus: "PENDING",
       },
       include: {
         patient: true,
@@ -123,5 +129,107 @@ export const getClinicPrescriptions = async (req: AuthRequest, res: Response) =>
   } catch (error) {
     console.error("Error fetching prescriptions:", error);
     res.status(500).json({ success: false, error: "Failed to fetch prescriptions" });
+  }
+};
+
+// ==========================================
+// 3. VERIFY PHARMACY OTP & RELEASE
+// ==========================================
+export const verifyPharmacyOtp = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { otpCode } = req.body;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
+
+    if (!otpCode) {
+      return res.status(400).json({ success: false, error: "OTP code is required" });
+    }
+
+    const prescription = await prisma.prescription.findUnique({
+      where: { id },
+      include: {
+        patient: true,
+      },
+    });
+
+    if (!prescription) {
+      return res.status(404).json({ success: false, error: "Prescription not found" });
+    }
+
+    if (prescription.pharmacyStatus === "FULFILLED") {
+      return res.status(400).json({ success: false, error: "Prescription already fulfilled" });
+    }
+
+    if (prescription.otpCode !== otpCode) {
+      return res.status(400).json({ success: false, error: "Invalid OTP code" });
+    }
+
+    const updatedPrescription = await prisma.prescription.update({
+      where: { id },
+      data: {
+        pharmacyStatus: "FULFILLED",
+      },
+      include: {
+        patient: true,
+        doctor: true,
+      },
+    });
+
+    // Notify the UI to instantly move it to Fulfilled
+    const io = req.app.get("io");
+    if (io) {
+      io.to(prescription.clinicId).emit("prescription_fulfilled", updatedPrescription);
+    }
+
+    res.status(200).json({ success: true, data: updatedPrescription });
+  } catch (error) {
+    console.error("Error verifying OTP:", error);
+    res.status(500).json({ success: false, error: "Failed to verify OTP" });
+  }
+};
+
+// ==========================================
+// 4. GET ACTIVE PRESCRIPTION FOR PATIENT
+// ==========================================
+export const getPatientPrescription = async (req: Request, res: Response) => {
+  try {
+    const { clinicId, token } = req.query;
+    if (!clinicId || !token) {
+      return res.status(400).json({ success: false, error: "Missing parameters" });
+    }
+    
+    // Find patient by clinic and token
+    const patient = await prisma.patient.findFirst({
+      where: {
+        clinicId: String(clinicId),
+        token: parseInt(String(token)),
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
+    if (!patient) {
+      return res.status(200).json({ success: true, data: null });
+    }
+
+    const prescription = await prisma.prescription.findFirst({
+      where: {
+        patientId: patient.id,
+        pharmacyStatus: "PENDING"
+      },
+      include: {
+        doctor: true,
+        patient: true
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
+    res.status(200).json({ success: true, data: prescription });
+  } catch (error) {
+    console.error("Error fetching patient prescription:", error);
+    res.status(500).json({ success: false, error: "Failed to fetch prescription" });
   }
 };

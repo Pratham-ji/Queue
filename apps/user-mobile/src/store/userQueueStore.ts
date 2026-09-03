@@ -32,6 +32,7 @@ interface UserQueueState {
   isClinicOffline: boolean;
   isEmergencyPause: boolean;
   emergencyMessage: string | null;
+  activePrescription: any | null;
 
   setClinic: (clinicId: string) => void;
   joinQueue: (name: string, phone: string) => Promise<void>;
@@ -61,6 +62,9 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
   isClinicOffline: false,
   isEmergencyPause: false,
   emergencyMessage: null,
+  activePrescription: null,
+
+  setOfflineStatus: (status) => set({ isOffline: status }),
 
   // 0. SET CLINIC (called from navigation — user picks a clinic)
   setClinic: (clinicId: string) => {
@@ -192,6 +196,25 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
     socket.on(`clinic_online_${activeClinicId}`, (data: { isOnline: boolean }) => {
       set({ isClinicOffline: !data.isOnline });
     });
+
+    // E. Prescription Issued
+    socket.off("new_prescription");
+    socket.on("new_prescription", (prescription: any) => {
+      const { activeToken } = get();
+      if (activeToken && prescription.patient?.token === activeToken) {
+        set({ activePrescription: prescription });
+      }
+    });
+
+    // F. Prescription Fulfilled by Pharmacy
+    socket.off("prescription_fulfilled");
+    socket.on("prescription_fulfilled", (prescription: any) => {
+      const { activePrescription } = get();
+      if (activePrescription && activePrescription.id === prescription.id) {
+        set({ activePrescription: null, queueStatus: "IDLE", activeToken: null });
+        AsyncStorage.removeItem("active_token");
+      }
+    });
   },
 
   // 4. FORCE REFRESH (uses dynamic clinicId)
@@ -221,6 +244,22 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
           const myIndex = list.findIndex((p: any) => p.token === activeToken);
           const ahead = myIndex === -1 ? 0 : myIndex;
           set({ peopleAhead: ahead, estimatedWait: ahead * 10 });
+          
+          if (myIndex === -1) {
+            // Not in waiting queue. Are they served with a prescription?
+            try {
+              const prescRes = await api.get(`/prescription/patient/active?clinicId=${activeClinicId}&token=${activeToken}`);
+              if (prescRes.data.success && prescRes.data.data) {
+                set({ activePrescription: prescRes.data.data });
+              } else {
+                // Completely done or cancelled
+                set({ queueStatus: "IDLE", activeToken: null, activePrescription: null });
+                AsyncStorage.removeItem("active_token");
+              }
+            } catch (err) {
+              console.log("Failed to fetch prescription state");
+            }
+          }
         }
       }
     } catch (error) {

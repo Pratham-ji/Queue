@@ -33,6 +33,9 @@ export default function PharmacyDashboard() {
   const [fulfilled, setFulfilled] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [verifyModal, setVerifyModal] = useState<string | null>(null);
+  const [otpInput, setOtpInput] = useState("");
+
   useEffect(() => {
     fetchPrescriptions();
 
@@ -51,6 +54,11 @@ export default function PharmacyDashboard() {
       setPending((prev) => [prescription, ...prev]);
     });
 
+    socket.on("prescription_fulfilled", (prescription: Prescription) => {
+      setPending((prev) => prev.filter((p) => p.id !== prescription.id));
+      setFulfilled((prev) => [prescription, ...prev.filter((p) => p.id !== prescription.id)]);
+    });
+
     return () => {
       socket.disconnect();
     };
@@ -64,10 +72,9 @@ export default function PharmacyDashboard() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      const all = res.data.data;
-      // Mock logic: assume all fetched ones are pending for now
-      // In a real app, you'd check a 'status' field on the Prescription
-      setPending(all);
+      const all: any[] = res.data.data;
+      setPending(all.filter((p) => p.pharmacyStatus === "PENDING"));
+      setFulfilled(all.filter((p) => p.pharmacyStatus === "FULFILLED"));
     } catch (error) {
       console.error("Failed to fetch prescriptions", error);
     } finally {
@@ -75,11 +82,20 @@ export default function PharmacyDashboard() {
     }
   };
 
-  const markFulfilled = (id: string) => {
-    const item = pending.find((p) => p.id === id);
-    if (item) {
-      setPending(pending.filter((p) => p.id !== id));
-      setFulfilled([item, ...fulfilled]);
+  const handleVerifyOtp = async () => {
+    if (!verifyModal || otpInput.length !== 6) return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(
+        `${API_BASE}/api/prescription/${verifyModal}/verify-otp`,
+        { otpCode: otpInput },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Socket will handle the UI move
+      setVerifyModal(null);
+      setOtpInput("");
+    } catch (error: any) {
+      alert(error.response?.data?.error || "Invalid OTP");
     }
   };
 
@@ -163,10 +179,10 @@ export default function PharmacyDashboard() {
                     </div>
 
                     <button 
-                      onClick={() => markFulfilled(p.id)}
+                      onClick={() => setVerifyModal(p.id)}
                       className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
-                      <CheckCircle2 size={18} /> Mark Fulfilled
+                      <CheckCircle2 size={18} /> Verify & Release
                     </button>
                   </div>
                 ))
@@ -205,6 +221,42 @@ export default function PharmacyDashboard() {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* OTP VERIFICATION MODAL */}
+      {verifyModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in">
+          <div className="bg-slate-900 border border-slate-700 p-8 rounded-2xl w-full max-w-md shadow-2xl animate-in zoom-in-95">
+            <h2 className="text-2xl font-bold text-white mb-2">Verify & Release</h2>
+            <p className="text-slate-400 mb-6">Ask the patient for the 6-digit OTP displayed on their app to securely hand over the medicines.</p>
+            
+            <input 
+              type="text" 
+              maxLength={6}
+              value={otpInput}
+              onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
+              placeholder="0 0 0 0 0 0"
+              className="w-full bg-slate-950 border border-slate-700 text-white text-center text-4xl tracking-[1em] py-4 rounded-xl font-mono mb-6 focus:outline-none focus:border-emerald-500 transition-colors"
+              autoFocus
+            />
+
+            <div className="flex gap-4">
+              <button 
+                onClick={() => { setVerifyModal(null); setOtpInput(""); }}
+                className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleVerifyOtp}
+                disabled={otpInput.length !== 6}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 size={18} /> Confirm
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

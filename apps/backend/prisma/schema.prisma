@@ -22,6 +22,10 @@ model User {
   livePhotoUrl    String? // The "Selfie" URL
   // -------------------------------
 
+  // --- NEW TELEHEALTH CREDITS ---
+  credits Int @default(100) // For the Telehealth & Messaging Module
+  // ------------------------------
+
   createdAt DateTime @default(now())
 
   // Relations...
@@ -49,6 +53,11 @@ model Clinic {
   // --- NEW DOCS ---
   addressProofUrl String? // Utility bill or Registration deed
   // ----------------
+
+  // --- EMERGENCY STATUS ---
+  isEmergencyPause Boolean @default(false)
+  emergencyMessage String?
+  // ------------------------
 
   createdAt DateTime @default(now())
 
@@ -210,6 +219,11 @@ model Prescription {
   notes     String?
   createdAt DateTime @default(now())
 
+  // --- NEW PHARMACY PIPELINE ---
+  pharmacyStatus PharmacyStatus @default(PENDING)
+  otpCode        String?
+  // -----------------------------
+
   // The walk-in queue patient
   patientId String
   patient   Patient @relation(fields: [patientId], references: [id])
@@ -221,4 +235,11 @@ model Prescription {
   // The clinic pharmacy where it will be fulfilled
   clinicId String
   clinic   Clinic @relation(fields: [clinicId], references: [id])
+}
+
+enum PharmacyStatus {
+  PENDING
+  PREPARING
+  READY
+  COMPLETED
 }

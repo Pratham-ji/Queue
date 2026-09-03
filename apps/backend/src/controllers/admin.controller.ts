@@ -29,18 +29,31 @@ export const getPendingClinics = async (req: Request, res: Response) => {
 
 export const approveClinic = async (req: Request, res: Response) => {
   try {
-    // FIX: Destructure with explicit type to solve "string | string[]" error
     const { clinicId } = req.params as { clinicId: string };
-
     const clinic = await prisma.clinic.update({
       where: { id: clinicId },
       data: { verified: true },
     });
+    res.json({ success: true, data: clinic });
+  } catch (error) {
+    res.status(500).json({ success: false, error: "Failed to approve clinic" });
+  }
+};
 
-    res
-      .status(200)
-      .json({ success: true, message: `Clinic ${clinic.name} is LIVE!` });
-  } catch (err) {
-    res.status(500).json({ success: false, error: "Approval failed" });
+export const getVerifiedClinics = async (req: Request, res: Response) => {
+  try {
+    const clinics = await prisma.clinic.findMany({
+      where: { verified: true },
+      include: {
+        members: {
+          include: { user: true },
+        },
+        doctors: true,
+      },
+      orderBy: { name: "asc" }
+    });
+    res.json({ success: true, data: clinics });
+  } catch (error) {
+    res.status(500).json({ success: false, error: "Failed to fetch verified clinics" });
   }
 };

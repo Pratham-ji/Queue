@@ -64,12 +64,12 @@ export default function Dashboard() {
     try {
       const token = localStorage.getItem("token");
       const res = await axios.get(
-        "http://13.201.230.245:5001/api/provider/my-clinics",
+        "http://13.201.230.245:5001/api/admin/verified",
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setMyClinics(res.data.data);
     } catch {
-      console.error("Failed to fetch my clinics");
+      console.error("Failed to fetch verified clinics");
     }
   };
 
@@ -117,11 +117,11 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          {/* MY CLINICS SECTION (For Doctors/Pharmacy Staff) */}
+          {/* VERIFIED CLINICS SECTION */}
           {myClinics.length > 0 && (
             <div className="mb-10">
               <h2 className="text-xl font-bold text-emerald-400 mb-4 flex items-center gap-2">
-                <Activity size={24} /> My Active Clinics (Pharmacy Desk)
+                <Activity size={24} /> Verified Clinics
               </h2>
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {myClinics.map((clinic) => (

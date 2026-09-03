@@ -229,10 +229,14 @@ export default function DashboardScreen({ navigation }: any) {
                   if (!activeClinic?.id) return;
                   const newStatus = !activeClinic.isEmergencyPause;
                   try {
+                    const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+                    const token = await AsyncStorage.getItem("access_token");
                     const res = await api.post("/provider/emergency", {
                       clinicId: activeClinic.id,
                       isEmergencyPause: newStatus,
                       emergencyMessage: newStatus ? "Doctor is currently in an emergency. Wait times are paused." : null
+                    }, {
+                      headers: { Authorization: `Bearer ${token}` }
                     });
                     if (res.data.success) {
                       fetchMyClinics(); // Refresh clinic state

@@ -142,7 +142,8 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       if (res.data.success) {
         set({ 
           queue: res.data.data,
-          currentPatient: res.data.current || null
+          currentPatient: res.data.current || null,
+          isOnline: res.data.clinic?.isOnline || false
         });
       }
     } catch (error) {
@@ -159,7 +160,13 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     set({ isOnline: newState });
 
     try {
-      await api.post("/provider/online", { clinicId: activeClinicId, isOnline: newState });
+      const token = await AsyncStorage.getItem("access_token");
+      await api.post("/provider/online", {
+        clinicId: activeClinicId,
+        isOnline: newState,
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
     } catch (e) {
       if (__DEV__) console.error("Failed to toggle online:", e);
     }

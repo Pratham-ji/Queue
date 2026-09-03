@@ -103,12 +103,24 @@ export default function DashboardScreen({ navigation }: any) {
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Running Late (10m)",
-          onPress: () => Alert.alert("Sent", "Notified: 10m Delay"),
-        },
-        {
-          text: "Emergency",
-          onPress: () => Alert.alert("Sent", "Notified: Emergency"),
+          text: activeClinic?.isEmergencyPause ? "Resume Operations" : "Emergency Pause",
+          onPress: async () => {
+            if (!activeClinic?.id) return;
+            const newStatus = !activeClinic.isEmergencyPause;
+            try {
+              const res = await api.post("/provider/emergency", {
+                clinicId: activeClinic.id,
+                isEmergencyPause: newStatus,
+                emergencyMessage: newStatus ? "Doctor is currently in an emergency. Wait times are paused." : null
+              });
+              if (res.data.success) {
+                Alert.alert("Success", newStatus ? "Emergency broadcasted." : "Operations resumed.");
+                fetchMyClinics(); // Refresh clinic state
+              }
+            } catch (err) {
+              Alert.alert("Error", "Failed to broadcast.");
+            }
+          },
         },
       ],
     );

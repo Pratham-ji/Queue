@@ -15,8 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { io } from "socket.io-client";
 import { api } from "../../services/api";
 
-// const BASE_URL = "http://192.168.31.69:5001"; // home ip
-const SOCKET_URL = "http://172.20.10.2:5001"; // jio phone
+const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || "http://13.201.230.245:5001";
 
 export default function CustomSessionScreen() {
   const route = useRoute<any>();

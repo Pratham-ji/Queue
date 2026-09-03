@@ -29,6 +29,8 @@ interface UserQueueState {
   estimatedWait: number; // In minutes
   expoPushToken: string | null;
   isOffline: boolean;
+  isEmergencyPause: boolean;
+  emergencyMessage: string | null;
 
   setClinic: (clinicId: string) => void;
   joinQueue: (name: string, phone: string) => Promise<void>;
@@ -55,6 +57,8 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
   estimatedWait: 0,
   expoPushToken: null,
   isOffline: false,
+  isEmergencyPause: false,
+  emergencyMessage: null,
 
   // 0. SET CLINIC (called from navigation — user picks a clinic)
   setClinic: (clinicId: string) => {
@@ -171,6 +175,15 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
       set({ currentServingToken: patient.token });
       get().refreshData(); // Force sync
     });
+
+    // C. Emergency Pause Update
+    socket.off(`clinic_emergency_${activeClinicId}`);
+    socket.on(`clinic_emergency_${activeClinicId}`, (data: { isEmergencyPause: boolean, emergencyMessage: string | null }) => {
+      set({
+        isEmergencyPause: data.isEmergencyPause,
+        emergencyMessage: data.emergencyMessage
+      });
+    });
   },
 
   // 4. FORCE REFRESH (uses dynamic clinicId)
@@ -184,10 +197,13 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
       if (res.data.success) {
         const list = res.data.data; // Waiting List
         const current = res.data.current; // Currently Serving
+        const clinic = res.data.clinic;
 
         set({
           queue: list,
           currentServingToken: current ? current.token : null,
+          isEmergencyPause: clinic?.isEmergencyPause || false,
+          emergencyMessage: clinic?.emergencyMessage || null,
         });
 
         // Recalculate Position

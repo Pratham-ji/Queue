@@ -23,6 +23,7 @@ export interface ClinicInfo {
   rating: number;
   memberRole: string;
   isPrimary: boolean;
+  isEmergencyPause: boolean;
 }
 
 interface QueueState {
@@ -34,11 +35,19 @@ interface QueueState {
   currentPatient: Patient | null;
   queue: Patient[];
   isOnline: boolean;
+  analytics: {
+    totalPatients: number;
+    avgWaitTime: number;
+    prescriptionsIssued: number;
+    trend: string;
+    trendUp: boolean;
+  } | null;
 
   // Actions
   fetchMyClinics: () => Promise<void>;
   setActiveClinic: (clinicId: string) => Promise<void>;
   fetchQueue: () => Promise<void>;
+  fetchAnalytics: () => Promise<void>;
   toggleOnline: () => void;
   callNextPatient: () => Promise<void>;
   initializeSocket: () => void;
@@ -52,6 +61,27 @@ export const useQueueStore = create<QueueState>((set, get) => ({
   currentPatient: null,
   queue: [],
   isOnline: false,
+  analytics: null,
+
+  fetchAnalytics: async () => {
+    try {
+      const token = await AsyncStorage.getItem("access_token");
+      if (!token) return;
+      const { activeClinicId } = get();
+      const endpoint = activeClinicId 
+        ? `/provider/analytics?clinicId=${activeClinicId}` 
+        : `/provider/analytics`;
+        
+      const res = await api.get(endpoint, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data.success) {
+        set({ analytics: res.data.data });
+      }
+    } catch (e) {
+      if (__DEV__) console.error("Failed to fetch analytics:", e);
+    }
+  },
 
   // 0. FETCH PROVIDER'S CLINICS (marketplace query)
   fetchMyClinics: async () => {

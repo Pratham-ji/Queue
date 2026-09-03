@@ -186,3 +186,44 @@ export const getProviderProfile = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ success: false, error: "Server Error" });
   }
 };
+
+export const toggleEmergency = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { clinicId, isEmergencyPause, emergencyMessage } = req.body;
+
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    if (!clinicId) return res.status(400).json({ error: "clinicId is required" });
+
+    // Verify user is an ADMIN or OWNER of the clinic
+    const membership = await prisma.clinicMember.findUnique({
+      where: { userId_clinicId: { userId, clinicId } },
+    });
+
+    if (!membership || !["OWNER", "ADMIN"].includes(membership.role)) {
+      return res.status(403).json({ error: "You don't have permission to toggle emergency status" });
+    }
+
+    const clinic = await prisma.clinic.update({
+      where: { id: clinicId },
+      data: {
+        isEmergencyPause,
+        emergencyMessage: isEmergencyPause ? emergencyMessage || "Emergency" : null,
+      },
+    });
+
+    // Broadcast event
+    const io = req.app.get("io");
+    if (io) {
+      io.emit(`clinic_emergency_${clinicId}`, {
+        isEmergencyPause,
+        emergencyMessage: clinic.emergencyMessage,
+      });
+    }
+
+    res.json({ success: true, data: clinic });
+  } catch (error) {
+    console.error("toggleEmergency error:", error);
+    res.status(500).json({ success: false, error: "Server Error" });
+  }
+};

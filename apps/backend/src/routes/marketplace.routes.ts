@@ -6,7 +6,9 @@ import {
   getMyActiveClinic,
   switchClinic,
   getProviderProfile,
+  toggleEmergency,
 } from "../controllers/marketplace.controller";
+import { getProviderAnalytics } from "../controllers/analytics.controller";
 
 const router = Router();
 
@@ -15,5 +17,7 @@ router.get("/my-clinics", requireAuth, requireRole(["PROVIDER", "ADMIN"]), getMy
 router.get("/my-clinic", requireAuth, requireRole(["PROVIDER", "ADMIN"]), getMyActiveClinic);
 router.post("/switch-clinic", requireAuth, requireRole(["PROVIDER", "ADMIN"]), switchClinic);
 router.get("/profile", requireAuth, getProviderProfile);
+router.get("/analytics", requireAuth, requireRole(["PROVIDER", "ADMIN"]), getProviderAnalytics);
+router.post("/emergency", requireAuth, requireRole(["PROVIDER", "ADMIN"]), toggleEmergency);
 
 export default router;

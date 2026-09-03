@@ -19,15 +19,21 @@ export const getQueue = async (req: Request, res: Response) => {
       orderBy: { token: "asc" },
     });
 
+    const clinic = await prisma.clinic.findUnique({
+      where: { id: clinicId },
+      select: { isEmergencyPause: true, emergencyMessage: true }
+    });
+
     if (queue.length === 0) {
       return res.status(200).json({
         success: true,
         data: [],
+        clinic,
         message: "Queue is empty",
       });
     }
 
-    res.status(200).json({ success: true, data: queue });
+    res.status(200).json({ success: true, data: queue, clinic });
   } catch (error) {
     console.error("getQueue error:", error);
     res.status(500).json({ success: false, error: "Server Error" });

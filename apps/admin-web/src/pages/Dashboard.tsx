@@ -63,13 +63,20 @@ export default function Dashboard() {
   const fetchMyClinics = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(
-        "http://13.201.230.245:5001/api/admin/verified",
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const userRaw = localStorage.getItem("user");
+      const user = userRaw ? JSON.parse(userRaw) : null;
+      
+      let endpoint = "http://13.201.230.245:5001/api/provider/my-clinics";
+      if (user?.role === "ADMIN") {
+        endpoint = "http://13.201.230.245:5001/api/admin/verified";
+      }
+
+      const res = await axios.get(endpoint, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setMyClinics(res.data.data);
     } catch {
-      console.error("Failed to fetch verified clinics");
+      console.error("Failed to fetch clinics for dashboard");
     }
   };
 

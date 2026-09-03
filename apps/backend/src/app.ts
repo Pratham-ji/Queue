@@ -19,6 +19,7 @@ import providerRoutes from "./routes/provider.routes";
 import doctorRoutes from "./routes/doctor.routes";
 import prescriptionRoutes from "./routes/prescription.routes";
 import marketplaceRoutes from "./routes/marketplace.routes";
+import chatRoutes from "./routes/chat.routes";
 
 // Controller imports for inline routes
 import {
@@ -106,6 +107,7 @@ app.use("/api/provider", providerRoutes);
 app.use("/api/provider", marketplaceRoutes);  // M:N marketplace endpoints
 app.use("/api/admin", adminRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/chat", chatRoutes);
 
 // Booking (inline routes)
 app.post("/api/booking/create", createAppointment);

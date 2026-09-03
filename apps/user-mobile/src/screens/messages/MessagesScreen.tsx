@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,10 +8,13 @@ import {
   Image,
   StatusBar,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Animatable from "react-native-animatable";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { api } from "../../services/api";
 
 // 🎨 THEME
 const COLORS = {
@@ -23,28 +26,8 @@ const COLORS = {
   border: "#E2E8F0",
   read: "#F1F5F9",
   unread: "#ECFDF5",
+  warning: "#F59E0B",
 };
-
-// 📨 MOCK DATA: CHATS
-const CHATS = [
-  {
-    id: "1",
-    doctor: "Dr. Trafalgar Law",
-    avatar:
-      "https://img.freepik.com/free-photo/doctor-offering-medical-teleconsultation_23-2149329007.jpg",
-    lastMsg: "Please bring your previous MRI reports.",
-    time: "10:30 AM",
-    unread: 2,
-  },
-  {
-    id: "2",
-    doctor: "Dr. Chopper",
-    avatar: "https://i.pravatar.cc/150?u=chopper",
-    lastMsg: "The medicine is ready for pickup.",
-    time: "Yesterday",
-    unread: 0,
-  },
-];
 
 // 🔔 MOCK DATA: NOTIFICATIONS
 const NOTIFICATIONS = [
@@ -58,65 +41,88 @@ const NOTIFICATIONS = [
   },
   {
     id: "2",
-    title: "Queue Alert",
-    body: "You are now #3 in line. Please head to the clinic.",
+    title: "It's your turn!",
+    body: "Please head inside the doctor's room.",
     time: "1 hour ago",
-    icon: "ticket",
+    icon: "notifications",
     color: "#10B981", // Green
   },
   {
     id: "3",
-    title: "Payment Successful",
-    body: "Transaction ID #88329 for $50.00 was successful.",
-    time: "Yesterday",
-    icon: "card",
-    color: "#8B5CF6", // Purple
+    title: "Prescription Ready",
+    body: "Your medicine is ready at the clinic pharmacy.",
+    time: "2 days ago",
+    icon: "medkit",
+    color: "#F59E0B", // Orange
   },
 ];
 
 export default function MessagesScreen() {
   const [activeTab, setActiveTab] = useState<"chats" | "alerts">("chats");
+  
+  const navigation = useNavigation<any>();
+  const [threads, setThreads] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [credits, setCredits] = useState(0);
+
+  const fetchThreads = async () => {
+    try {
+      setLoading(true);
+      const [threadRes, userRes] = await Promise.all([
+        api.get("/chat/threads"),
+        api.get("/auth/me")
+      ]);
+      setThreads(threadRes.data.data);
+      if (userRes.data.data?.credits !== undefined) {
+        setCredits(userRes.data.data.credits);
+      }
+    } catch (error) {
+      console.error("Error fetching threads:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchThreads();
+    }, [])
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
+      <StatusBar barStyle="dark-content" />
 
       {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Inbox</Text>
-        <TouchableOpacity style={styles.iconBtn}>
-          <Ionicons name="create-outline" size={24} color={COLORS.primary} />
-        </TouchableOpacity>
+        <View style={styles.creditBadge}>
+          <Ionicons name="wallet" size={16} color="#FFF" />
+          <Text style={styles.creditText}>{credits} Credits</Text>
+        </View>
       </View>
 
-      {/* SEGMENTED CONTROL (TABS) */}
+      {/* TABS */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
           style={[styles.tabBtn, activeTab === "chats" && styles.activeTab]}
           onPress={() => setActiveTab("chats")}
         >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "chats" && styles.activeTabText,
-            ]}
-          >
-            Messages
+          <Text style={[styles.tabText, activeTab === "chats" && styles.activeTabText]}>
+            Chats
           </Text>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{threads.length}</Text>
+          </View>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.tabBtn, activeTab === "alerts" && styles.activeTab]}
           onPress={() => setActiveTab("alerts")}
         >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "alerts" && styles.activeTabText,
-            ]}
-          >
-            Notifications
+          <Text style={[styles.tabText, activeTab === "alerts" && styles.activeTabText]}>
+            Alerts
           </Text>
-          {/* Badge */}
           <View style={styles.badge}>
             <Text style={styles.badgeText}>3</Text>
           </View>
@@ -139,39 +145,40 @@ export default function MessagesScreen() {
 
       {/* CONTENT LIST */}
       {activeTab === "chats" ? (
-        <FlatList
-          data={CHATS}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item, index }) => (
-            <Animatable.View animation="fadeInUp" delay={index * 100}>
-              <TouchableOpacity
-                style={[
-                  styles.chatCard,
-                  item.unread > 0 ? styles.unreadCard : styles.readCard,
-                ]}
-              >
-                <Image source={{ uri: item.avatar }} style={styles.avatar} />
-                <View style={styles.chatInfo}>
-                  <View style={styles.chatTop}>
-                    <Text style={styles.chatName}>{item.doctor}</Text>
-                    <Text style={styles.chatTime}>{item.time}</Text>
-                  </View>
-                  <View style={styles.chatBottom}>
-                    <Text style={styles.chatMsg} numberOfLines={1}>
-                      {item.lastMsg}
-                    </Text>
-                    {item.unread > 0 && (
-                      <View style={styles.unreadBadge}>
-                        <Text style={styles.unreadText}>{item.unread}</Text>
+        loading ? (
+          <ActivityIndicator style={{ marginTop: 40 }} color={COLORS.primary} />
+        ) : (
+          <FlatList
+            data={threads}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            renderItem={({ item, index }) => {
+              const isDoctor = !!item.user;
+              const displayProfile = isDoctor ? item.user : item.doctor;
+              return (
+                <Animatable.View animation="fadeInUp" delay={index * 100}>
+                  <TouchableOpacity
+                    style={[styles.chatCard, styles.readCard]}
+                    onPress={() => navigation.navigate("ChatScreen", { threadId: item.id, profile: displayProfile, isActive: item.isActive })}
+                  >
+                    <Image source={{ uri: displayProfile?.image || "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2753&auto=format&fit=crop" }} style={styles.avatar} />
+                    <View style={styles.chatInfo}>
+                      <View style={styles.chatTop}>
+                        <Text style={styles.chatName}>{displayProfile?.name || "User"}</Text>
+                        <Text style={styles.chatTime}>{item.isActive ? "Active" : "Closed"}</Text>
                       </View>
-                    )}
-                  </View>
-                </View>
-              </TouchableOpacity>
-            </Animatable.View>
-          )}
-        />
+                      <View style={styles.chatBottom}>
+                        <Text style={styles.chatMsg} numberOfLines={1}>
+                          {item.isActive ? "Tap to continue conversation" : "Thread closed"}
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                </Animatable.View>
+              );
+            }}
+          />
+        )
       ) : (
         <FlatList
           data={NOTIFICATIONS}
@@ -218,6 +225,16 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 28, fontWeight: "800", color: COLORS.text },
   iconBtn: { padding: 8, backgroundColor: COLORS.bg, borderRadius: 12 },
+  creditBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.warning,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
+  },
+  creditText: { color: "#FFF", fontWeight: "700", fontSize: 13 },
 
   // TABS
   tabContainer: {

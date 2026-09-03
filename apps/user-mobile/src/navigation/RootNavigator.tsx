@@ -8,7 +8,8 @@ import OTPVerificationScreen from "../screens/auth/OTPVerificationScreen";
 import HospitalDetailsScreen from "../screens/hospital/HospitalDetailsScreen";
 import CustomSessionScreen from "../screens/create/CustomSessionScreen";
 import QueueScreen from "../screens/queue/QueueScreen";
-import BookingScreen from "../screens/booking/BookingScreen"; // ✅ IMPORT THIS
+import BookingScreen from "../screens/booking/BookingScreen";
+import ChatScreen from "../screens/telehealth/ChatScreen";
 import { useUserQueueStore } from "../store/userQueueStore";
 
 export type RootStackParamList = {
@@ -18,6 +19,7 @@ export type RootStackParamList = {
   HospitalDetails: { id: string };
   Queue: { clinicId?: string; clinicName?: string } | undefined;
   Booking: { doctorId: string }; // ✅ ADD THIS
+  ChatScreen: { threadId: string; profile: any; isActive: boolean }; // ✅ TELEHEALTH
   
   CustomSession: { session: any; role: string; participant?: any };
 };
@@ -70,6 +72,12 @@ export default function RootNavigator() {
           animation: "slide_from_bottom", // Nice slide up effect
           presentation: "modal", // optional: makes it look like a popup
         }}
+      />
+      
+      <Stack.Screen
+        name="ChatScreen"
+        component={ChatScreen}
+        options={{ animation: "slide_from_right" }}
       />
     </Stack.Navigator>
   );

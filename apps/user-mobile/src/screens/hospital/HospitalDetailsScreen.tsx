@@ -41,6 +41,30 @@ export default function HospitalDetailsScreen() {
     });
   }, [id]);
 
+  const [startingChat, setStartingChat] = useState<string | null>(null);
+
+  const startChat = async (doctorId: string, profile: any) => {
+    setStartingChat(doctorId);
+    try {
+      const res = await api.post("/chat/threads/start", { doctorId });
+      if (res.data.success) {
+        navigation.navigate("ChatScreen", {
+          threadId: res.data.data.id,
+          profile,
+          isActive: res.data.data.isActive,
+        });
+      }
+    } catch (error: any) {
+      if (error.response?.status === 402) {
+        alert("Insufficient credits (10 required). Please recharge your wallet.");
+      } else {
+        alert("Failed to start chat.");
+      }
+    } finally {
+      setStartingChat(null);
+    }
+  };
+
   if (!hospital)
     return (
       <View style={styles.loader}>
@@ -117,8 +141,21 @@ export default function HospitalDetailsScreen() {
                 </View>
               </View>
 
-              <View style={styles.bookBtn}>
-                <Text style={styles.bookBtnText}>Book</Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <TouchableOpacity 
+                  style={[styles.bookBtn, { backgroundColor: "#E2E8F0" }]}
+                  onPress={() => startChat(doc.id, doc)}
+                  disabled={startingChat === doc.id}
+                >
+                  {startingChat === doc.id ? (
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                  ) : (
+                    <Ionicons name="chatbubble" size={18} color={COLORS.primary} />
+                  )}
+                </TouchableOpacity>
+                <View style={styles.bookBtn}>
+                  <Text style={styles.bookBtnText}>Book</Text>
+                </View>
               </View>
             </TouchableOpacity>
           ))}

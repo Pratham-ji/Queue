@@ -34,6 +34,7 @@ model User {
   ownedClinics  Clinic[]       @relation("ClinicOwner")
   doctorProfile DoctorProfile?
   appointments  Appointment[]
+  chatThreads   ChatThread[]
 
   // M:N clinic memberships (marketplace model)
   clinicMemberships ClinicMember[]
@@ -53,7 +54,7 @@ model Clinic {
   // --- NEW DOCS ---
   addressProofUrl String? // Utility bill or Registration deed
   // ----------------
-
+  
   // --- EMERGENCY STATUS ---
   isEmergencyPause Boolean @default(false)
   emergencyMessage String?
@@ -140,6 +141,7 @@ model DoctorProfile {
 
   appointments  Appointment[]
   prescriptions Prescription[]
+  chatThreads   ChatThread[]
 }
 
 // 6. INSTANT QUEUE (USP Feature)
@@ -242,4 +244,30 @@ enum PharmacyStatus {
   PREPARING
   READY
   COMPLETED
+}
+
+// 8. TELEHEALTH & MESSAGING
+model ChatThread {
+  id        String   @id @default(uuid())
+  isActive  Boolean  @default(true) // If true, bypasses credit checks
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  doctorId String
+  doctor   DoctorProfile @relation(fields: [doctorId], references: [id])
+
+  messages Message[]
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  content   String
+  senderId  String   // Either userId or doctor.userId
+  createdAt DateTime @default(now())
+
+  threadId String
+  thread   ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
 }

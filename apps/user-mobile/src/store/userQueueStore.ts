@@ -54,6 +54,7 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
   currentServingToken: null,
   estimatedWait: 0,
   expoPushToken: null,
+  isOffline: false,
 
   // 0. SET CLINIC (called from navigation — user picks a clinic)
   setClinic: (clinicId: string) => {

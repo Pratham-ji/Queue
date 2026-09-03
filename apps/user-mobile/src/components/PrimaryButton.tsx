@@ -1,5 +1,5 @@
 import { Pressable, Text, StyleSheet } from "react-native";
-import { colors, spacing, radius, typography } from "../theme";
+import { colors, spacing, typography } from "../theme";
 
 export default function PrimaryButton({
   label,
@@ -19,7 +19,7 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: colors.primary,
     paddingVertical: spacing.md,
-    borderRadius: radius.lg,
+    borderRadius: 12,
     alignItems: "center",
   },
   text: {

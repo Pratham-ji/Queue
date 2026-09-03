@@ -205,7 +205,7 @@ export default function QueueScreen({ route }: any) {
             <TouchableOpacity style={styles.cancelBtn} onPress={leaveQueue}>
               <Text style={styles.cancelText}>Cancel Ticket</Text>
             </TouchableOpacity>
-          </Animatable.View>
+          </Animated.View>
         ) : (
           // 📝 JOIN FORM
           <Animatable.View

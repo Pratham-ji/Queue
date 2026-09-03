@@ -182,10 +182,11 @@ export default function HomeScreen() {
           <Text style={styles.subSub} numberOfLines={1}>{clinic.city}</Text>
           
           <TouchableOpacity 
-            style={styles.subQuickBtn}
-            onPress={() => handleQuickJoin(clinic.id)}
+            style={[styles.subQuickBtn, clinic.isEmergencyPause && { backgroundColor: "#475569" }]}
+            onPress={() => handleQuickJoin(clinic.id, clinic.isEmergencyPause)}
+            disabled={clinic.isEmergencyPause}
           >
-            <Text style={styles.subQuickText}>Join</Text>
+            <Text style={styles.subQuickText}>{clinic.isEmergencyPause ? "PAUSED" : "Join"}</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>

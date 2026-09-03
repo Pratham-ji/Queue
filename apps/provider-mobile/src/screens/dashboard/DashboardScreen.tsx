@@ -97,36 +97,7 @@ export default function DashboardScreen({ navigation }: any) {
     return "GOOD EVENING,";
   };
 
-  const handleBroadcast = () => {
-    Alert.alert(
-      "Broadcast Announcement",
-      "Send a notification to waiting patients?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: activeClinic?.isEmergencyPause ? "Resume Operations" : "Emergency Pause",
-          onPress: async () => {
-            if (!activeClinic?.id) return;
-            const newStatus = !activeClinic.isEmergencyPause;
-            try {
-              const res = await api.post("/provider/emergency", {
-                clinicId: activeClinic.id,
-                isEmergencyPause: newStatus,
-                emergencyMessage: newStatus ? "Doctor is currently in an emergency. Wait times are paused." : null
-              });
-              if (res.data.success) {
-                Alert.alert("Success", newStatus ? "Emergency broadcasted." : "Operations resumed.");
-                fetchMyClinics(); // Refresh clinic state
-              }
-            } catch (err: any) {
-              const msg = err.response?.data?.error || err.message || "Unknown error";
-              Alert.alert("Error", `Failed to broadcast. ${msg}`);
-            }
-          },
-        },
-      ],
-    );
-  };
+
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -192,7 +163,11 @@ export default function DashboardScreen({ navigation }: any) {
             style={styles.heroCardShadow}
           >
             <LinearGradient
-              colors={["#2563EB", "#1D4ED8"]}
+              colors={
+                activeClinic?.isEmergencyPause
+                  ? ["#F59E0B", "#D97706"] // Amber/Orange for Emergency
+                  : ["#2563EB", "#1D4ED8"] // Blue for Normal
+              }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.heroCard}
@@ -220,12 +195,18 @@ export default function DashboardScreen({ navigation }: any) {
 
               <View style={styles.patientInfo}>
                 <Text style={styles.pName}>
-                  {currentPatient ? currentPatient.name : "No Active Patient"}
+                  {currentPatient 
+                    ? currentPatient.name 
+                    : activeClinic?.isEmergencyPause 
+                      ? "Queue Paused" 
+                      : "No Active Patient"}
                 </Text>
                 <Text style={styles.pDetail}>
                   {currentPatient
                     ? `${currentPatient.type || "General Visit"} • ${currentPatient.arrivalTime || "Checked In"}`
-                    : "Waiting for next patient..."}
+                    : activeClinic?.isEmergencyPause
+                      ? "Emergency broadcast active. Wait times frozen."
+                      : "Waiting for next patient..."}
                 </Text>
               </View>
             </LinearGradient>
@@ -244,14 +225,40 @@ export default function DashboardScreen({ navigation }: any) {
 
               <TouchableOpacity
                 style={styles.actionBtn}
-                onPress={handleBroadcast}
+                onPress={async () => {
+                  if (!activeClinic?.id) return;
+                  const newStatus = !activeClinic.isEmergencyPause;
+                  try {
+                    const res = await api.post("/provider/emergency", {
+                      clinicId: activeClinic.id,
+                      isEmergencyPause: newStatus,
+                      emergencyMessage: newStatus ? "Doctor is currently in an emergency. Wait times are paused." : null
+                    });
+                    if (res.data.success) {
+                      fetchMyClinics(); // Refresh clinic state
+                    }
+                  } catch (err: any) {
+                    const msg = err.response?.data?.error || err.message || "Unknown error";
+                    Alert.alert("Error", `Failed to broadcast. ${msg}`);
+                  }
+                }}
               >
-                <Ionicons
-                  name="megaphone-outline"
-                  size={20}
-                  color={COLORS.warning}
-                />
-                <Text style={styles.actionText}>Notify</Text>
+                <Animatable.View
+                  animation={activeClinic?.isEmergencyPause ? "pulse" : undefined}
+                  iterationCount="infinite"
+                >
+                  <Ionicons
+                    name={activeClinic?.isEmergencyPause ? "play-circle" : "warning"}
+                    size={20}
+                    color={activeClinic?.isEmergencyPause ? COLORS.primary : "#F59E0B"}
+                  />
+                </Animatable.View>
+                <Text style={[
+                  styles.actionText, 
+                  activeClinic?.isEmergencyPause && { color: COLORS.primary, fontWeight: 'bold' }
+                ]}>
+                  {activeClinic?.isEmergencyPause ? "Resume" : "Emergency"}
+                </Text>
               </TouchableOpacity>
 
               <View style={styles.vertDivider} />

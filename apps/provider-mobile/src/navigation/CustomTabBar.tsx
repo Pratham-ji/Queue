@@ -55,14 +55,14 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
                   
                   if (!isPaused) {
                     socket.emit('queue_pause', { clinicId: activeClinic.id });
-                    // alert("Queue Paused & Broadcast Sent!"); // Option to remove alert for fluid feeling
                   } else {
                     socket.emit('queue_resume', { clinicId: activeClinic.id });
                   }
                   
-                  // Optimistic update via store if desired, but store listens to socket.
-                  // For instant feel, we could manually update store here, but we'll let socket handle it 
-                  // or just wait for the round trip which is ~50ms.
+                  // Optimistic update for instant feel
+                  useQueueStore.setState({
+                    activeClinic: { ...activeClinic, isEmergencyPause: !isPaused }
+                  });
                 } catch (err) {
                   alert("Failed to toggle queue state");
                 }
@@ -73,7 +73,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
                   key={index}
                   activeOpacity={0.8}
                   onPress={handleEmergency}
-                  style={[styles.premiumButton, isPaused && { backgroundColor: "#059669", shadowColor: "#059669" }]}
+                  style={[styles.premiumButton, isPaused && { backgroundColor: "#10B981", shadowColor: "#10B981" }]}
                 >
                   <Text style={styles.premiumText}>{isPaused ? "Resume ▶️" : "Pause Q 🚨"}</Text>
                 </TouchableOpacity>

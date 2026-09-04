@@ -255,7 +255,7 @@ export default function DashboardScreen({ navigation }: any) {
                     <TextInput
                       style={styles.vitalInput}
                       placeholder="kg"
-                      placeholderTextColor="rgba(255,255,255,0.5)"
+                      placeholderTextColor="#F8FAFC"
                       keyboardType="numeric"
                       value={weight}
                       onChangeText={setWeight}
@@ -266,7 +266,7 @@ export default function DashboardScreen({ navigation }: any) {
                     <TextInput
                       style={styles.vitalInput}
                       placeholder="mmHg"
-                      placeholderTextColor="rgba(255,255,255,0.5)"
+                      placeholderTextColor="#F8FAFC"
                       value={bp}
                       onChangeText={setBp}
                     />
@@ -381,19 +381,21 @@ export default function DashboardScreen({ navigation }: any) {
             <Text style={styles.emptySub}>Enjoy your break, Doctor.</Text>
           </View>
         )}
-      </ScrollView>
 
-      {/* FLOATING ACTION BUTTON - SLIDE TO CALL */}
-      <Animatable.View
-        animation="slideInUp"
-        duration={500}
-        style={styles.fabContainer}
-      >
-        <SlideToCall 
-          onTrigger={handleCallNext} 
-          disabled={!isOnline || queue.length === 0} 
-        />
-      </Animatable.View>
+        {/* INLINE ACTION BUTTON - SLIDE TO CALL */}
+        {queue.length > 0 && (
+          <Animatable.View
+            animation="fadeInUp"
+            duration={500}
+            style={styles.fabContainer}
+          >
+            <SlideToCall 
+              onTrigger={handleCallNext} 
+              disabled={!isOnline} 
+            />
+          </Animatable.View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -449,7 +451,7 @@ const styles = StyleSheet.create({
   },
 
   // Scroll Content
-  scroll: { paddingHorizontal: 24, paddingBottom: 180, paddingTop: 10 },
+  scroll: { paddingHorizontal: 24, paddingBottom: 120, paddingTop: 10 },
 
   // Hero Card
   heroCardShadow: {
@@ -463,9 +465,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
   },
   heroCard: {
-    borderRadius: 24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     padding: 24,
-    paddingBottom: 80, // Extra space for overlapping actions
     position: "relative",
   },
   cardHeader: { flexDirection: "row", justifyContent: "space-between" },
@@ -529,9 +533,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   vitalInput: {
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: "rgba(255, 255, 255, 0.3)",
     borderRadius: 8,
     color: "#FFF",
     paddingHorizontal: 12,
@@ -560,18 +564,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#FFF",
-    marginHorizontal: 20,
-    marginTop: -40,
-    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
     paddingVertical: 12,
     paddingHorizontal: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
   },
   actionBtn: { flex: 1, alignItems: "center", gap: 6, paddingVertical: 4 },
   actionText: { fontSize: 12, fontWeight: "600", color: "#334155" },
@@ -662,8 +663,8 @@ const styles = StyleSheet.create({
   },
   emptySub: { color: "#94A3B8", fontSize: 13, marginTop: 4 },
 
-  // Floating Button
-  fabContainer: { position: "absolute", bottom: 110, left: 24, right: 24 },
+  // Inline Button Container
+  fabContainer: { marginTop: 24, marginBottom: 16 },
   primaryBtn: {
     height: 56,
     backgroundColor: "#0F172A",

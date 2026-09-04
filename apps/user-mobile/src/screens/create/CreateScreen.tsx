@@ -10,21 +10,22 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import * as Animatable from "react-native-animatable";
 import { useNavigation } from "@react-navigation/native";
 import { api } from "../../services/api";
 
 const COLORS = {
-  primary: "#047857", // Emerald
+  primary: "#7C3AED", // Vibrant Violet
   bg: "#F8FAFC",
-  text: "#1E293B",
+  text: "#0F172A",
   subText: "#64748B",
   white: "#FFFFFF",
   border: "#E2E8F0",
+  accent: "#F59E0B" // Amber
 };
 
 export default function CreateScreen() {
@@ -37,13 +38,12 @@ export default function CreateScreen() {
   const [joinCode, setJoinCode] = useState("");
   const [guestName, setGuestName] = useState("");
 
-  // 1. HOST LOGIC
   const handleHost = async () => {
     if (!hostTitle.trim()) return;
     setLoading(true);
     try {
       const res = await api.post("/custom/create", {
-        hostName: "You", // In future, fetch from Profile
+        hostName: "You",
         title: hostTitle,
       });
       if (res.data.success) {
@@ -61,7 +61,6 @@ export default function CreateScreen() {
     }
   };
 
-  // 2. JOIN LOGIC
   const handleJoin = async () => {
     if (!joinCode.trim() || !guestName.trim()) return;
     setLoading(true);
@@ -83,211 +82,251 @@ export default function CreateScreen() {
     }
   };
 
-  // --- UI SECTIONS ---
-  const renderSelect = () => (
-    <ScrollView contentContainerStyle={styles.content}>
-      <Text style={styles.heroTitle}>Instant Queue</Text>
-      <Text style={styles.heroSub}>
-        Eliminate waiting times for anything.{"\n"}Events • Salons • Banks •
-        Office Hours
-      </Text>
-
-      {/* HOST CARD */}
-      <TouchableOpacity activeOpacity={0.9} onPress={() => setMode("HOST")}>
-        <LinearGradient colors={["#047857", "#065F46"]} style={styles.card}>
-          <View style={styles.cardIcon}>
-            <Ionicons name="add" size={32} color="#FFF" />
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
+      
+      {mode === "SELECT" && (
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.headerRow}>
+            <Text style={styles.headerTitle}>Custom Q ⚡</Text>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.cardTitle}>Start a Queue</Text>
-            <Text style={styles.cardDesc}>For Business Owners & Hosts</Text>
+          
+          <Animatable.View animation="fadeIn" style={styles.illustrationBox}>
+            <View style={styles.iconCircle}>
+              <Ionicons name="flash" size={48} color={COLORS.accent} />
+            </View>
+            <Text style={styles.heroText}>Host your own queue!</Text>
+            <Text style={styles.heroSubText}>
+              Perfect for events, barbers, or food stalls. No live tracking, just simple manual turn management.
+            </Text>
+          </Animatable.View>
+
+          <View style={styles.actionSection}>
+            <TouchableOpacity 
+              style={[styles.mainBtn, { backgroundColor: COLORS.primary }]} 
+              activeOpacity={0.8}
+              onPress={() => setMode("HOST")}
+            >
+              <View style={styles.btnContent}>
+                <Ionicons name="add-circle" size={24} color={COLORS.white} />
+                <Text style={styles.mainBtnText}>Create a Queue</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.7)" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.mainBtn, { backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border }]} 
+              activeOpacity={0.8}
+              onPress={() => setMode("JOIN")}
+            >
+              <View style={styles.btnContent}>
+                <Ionicons name="log-in" size={24} color={COLORS.text} />
+                <Text style={[styles.mainBtnText, { color: COLORS.text }]}>Join a Custom Queue</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={COLORS.subText} />
+            </TouchableOpacity>
           </View>
-          <Ionicons name="arrow-forward" size={24} color="#A7F3D0" />
-        </LinearGradient>
-      </TouchableOpacity>
-
-      {/* JOIN CARD */}
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onPress={() => setMode("JOIN")}
-        style={styles.joinCard}
-      >
-        <View style={[styles.cardIcon, { backgroundColor: "#EFF6FF" }]}>
-          <Ionicons name="scan" size={28} color="#3B82F6" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.cardTitle, { color: COLORS.text }]}>
-            Join with Code
-          </Text>
-          <Text style={styles.cardDesc}>For Customers & Students</Text>
-        </View>
-        <Ionicons name="arrow-forward" size={24} color="#CBD5E1" />
-      </TouchableOpacity>
-    </ScrollView>
-  );
-
-  const renderForm = (isHost: boolean) => (
-    <Animatable.View animation="fadeInUp" style={styles.formContainer}>
-      <TouchableOpacity
-        onPress={() => setMode("SELECT")}
-        style={styles.backRow}
-      >
-        <Ionicons name="arrow-back" size={24} color={COLORS.text} />
-        <Text style={styles.backText}>Back</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.formHeader}>
-        {isHost ? "Create New Queue" : "Join a Queue"}
-      </Text>
-
-      {isHost ? (
-        <>
-          <Text style={styles.label}>Queue Name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. PBL Review, Table Service..."
-            value={hostTitle}
-            onChangeText={setHostTitle}
-            autoFocus
-          />
-        </>
-      ) : (
-        <>
-          <Text style={styles.label}>6-Digit Code</Text>
-          <TextInput
-            style={[
-              styles.input,
-              { textAlign: "center", letterSpacing: 4, fontSize: 24 },
-            ]}
-            placeholder="000000"
-            maxLength={6}
-            keyboardType="number-pad"
-            value={joinCode}
-            onChangeText={setJoinCode}
-          />
-          <Text style={styles.label}>Your Name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. John Doe"
-            value={guestName}
-            onChangeText={setGuestName}
-          />
-        </>
+        </ScrollView>
       )}
 
-      <TouchableOpacity
-        style={styles.mainBtn}
-        onPress={isHost ? handleHost : handleJoin}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#FFF" />
-        ) : (
-          <Text style={styles.btnText}>
-            {isHost ? "Launch Queue 🚀" : "Get in Line"}
-          </Text>
-        )}
-      </TouchableOpacity>
-    </Animatable.View>
-  );
+      {/* HOST MODE */}
+      {mode === "HOST" && (
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{flex:1}}>
+          <View style={styles.formContainer}>
+            <TouchableOpacity style={styles.backBtn} onPress={() => setMode("SELECT")}>
+              <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+            <Text style={styles.formTitle}>Host a Queue</Text>
+            <Text style={styles.formSub}>Give your queue a catchy name so guests know what they're waiting for.</Text>
+            
+            <View style={styles.inputWrap}>
+              <Ionicons name="text" size={20} color={COLORS.subText} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. Comic Con Meet & Greet"
+                value={hostTitle}
+                onChangeText={setHostTitle}
+                placeholderTextColor={COLORS.subText}
+                autoFocus
+              />
+            </View>
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
-        {mode === "SELECT" ? renderSelect() : renderForm(mode === "HOST")}
-      </KeyboardAvoidingView>
+            <TouchableOpacity style={[styles.submitBtn, { backgroundColor: COLORS.primary }]} onPress={handleHost}>
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Start Hosting</Text>}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      )}
+
+      {/* JOIN MODE */}
+      {mode === "JOIN" && (
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{flex:1}}>
+          <View style={styles.formContainer}>
+            <TouchableOpacity style={styles.backBtn} onPress={() => setMode("SELECT")}>
+              <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+            <Text style={styles.formTitle}>Join a Queue</Text>
+            <Text style={styles.formSub}>Enter the 6-digit code provided by your host.</Text>
+            
+            <View style={styles.inputWrap}>
+              <Ionicons name="keypad" size={20} color={COLORS.subText} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="6-Digit Code"
+                value={joinCode}
+                onChangeText={setJoinCode}
+                placeholderTextColor={COLORS.subText}
+                maxLength={6}
+                autoCapitalize="characters"
+                autoFocus
+              />
+            </View>
+
+            <View style={[styles.inputWrap, { marginTop: 16 }]}>
+              <Ionicons name="person" size={20} color={COLORS.subText} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Your Name"
+                value={guestName}
+                onChangeText={setGuestName}
+                placeholderTextColor={COLORS.subText}
+              />
+            </View>
+
+            <TouchableOpacity style={[styles.submitBtn, { backgroundColor: COLORS.text }]} onPress={handleJoin}>
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Join Now</Text>}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-  content: { padding: 24, paddingTop: 40 },
-
-  heroTitle: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: COLORS.text,
-    marginBottom: 8,
-  },
-  heroSub: {
-    fontSize: 16,
-    color: COLORS.subText,
-    lineHeight: 24,
-    marginBottom: 40,
-  },
-
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 24,
-    borderRadius: 24,
-    marginBottom: 20,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  joinCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 24,
-    borderRadius: 24,
+  scrollContent: { padding: 24, paddingBottom: 120 },
+  headerRow: { marginBottom: 32 },
+  headerTitle: { fontSize: 32, fontWeight: "800", color: COLORS.text, letterSpacing: -1 },
+  
+  illustrationBox: {
     backgroundColor: COLORS.white,
+    borderRadius: 24,
+    padding: 32,
+    alignItems: "center",
+    marginBottom: 32,
     borderWidth: 1,
     borderColor: COLORS.border,
     shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
+    elevation: 2,
   },
-  cardIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "rgba(255,255,255,0.2)",
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "rgba(245, 158, 11, 0.15)",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 16,
+    marginBottom: 20,
   },
-  cardTitle: { fontSize: 18, fontWeight: "700", color: "#FFF" },
-  cardDesc: { fontSize: 13, color: "rgba(255,255,255,0.8)", marginTop: 2 },
+  heroText: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  heroSubText: {
+    fontSize: 15,
+    color: COLORS.subText,
+    textAlign: "center",
+    lineHeight: 22,
+  },
 
-  formContainer: { flex: 1, padding: 24 },
-  backRow: { flexDirection: "row", alignItems: "center", marginBottom: 32 },
-  backText: { fontSize: 16, fontWeight: "600", marginLeft: 8 },
-  formHeader: {
+  actionSection: { gap: 16 },
+  mainBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 20,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  btnContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  mainBtnText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.white,
+  },
+
+  formContainer: {
+    padding: 24,
+    flex: 1,
+  },
+  backBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.white,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  formTitle: {
     fontSize: 28,
     fontWeight: "800",
     color: COLORS.text,
-    marginBottom: 32,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: COLORS.subText,
     marginBottom: 8,
-    textTransform: "uppercase",
   },
-  input: {
+  formSub: {
+    fontSize: 15,
+    color: COLORS.subText,
+    marginBottom: 32,
+    lineHeight: 22,
+  },
+  inputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: COLORS.white,
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 16,
-    padding: 18,
-    fontSize: 18,
-    marginBottom: 24,
+    paddingHorizontal: 16,
+    height: 56,
   },
-  mainBtn: {
-    backgroundColor: COLORS.primary,
-    height: 60,
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: COLORS.text,
+    fontWeight: "500",
+  },
+  submitBtn: {
+    height: 56,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 16,
+    marginTop: 32,
   },
-  btnText: { color: "#FFF", fontSize: 18, fontWeight: "700" },
+  submitText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "700",
+  }
 });

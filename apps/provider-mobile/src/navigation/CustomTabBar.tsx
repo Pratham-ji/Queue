@@ -14,7 +14,12 @@ const COLORS = {
   muted: "#64748B",
 };
 
+import { useQueueStore } from "../store/queueStore";
+
 export default function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const { activeClinic, fetchMyClinics } = useQueueStore();
+  const isPaused = activeClinic?.isEmergencyPause || false;
+
   return (
     <View style={styles.container}>
       <BlurView intensity={100} tint="dark" style={styles.blurContainer}>
@@ -44,12 +49,10 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
             // Premium Action Button (Far Right)
             if (route.name === "Emergency") {
               const handleEmergency = async () => {
+                if (!activeClinic?.id) return;
                 try {
                   const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
                   const token = await AsyncStorage.getItem("access_token");
-                  const userStr = await AsyncStorage.getItem("user_data");
-                  const user = userStr ? JSON.parse(userStr) : null;
-                  const clinicId = user?.clinicId || "1"; // Need clinic id to pause
 
                   const res = await fetch("http://13.201.230.245:5001/api/provider/emergency", {
                     method: "POST",
@@ -58,14 +61,17 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
                       "Authorization": `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                      clinicId: clinicId,
-                      isEmergencyPause: true,
-                      emergencyMessage: "Emergency broadcast active."
+                      clinicId: activeClinic.id,
+                      isEmergencyPause: !isPaused,
+                      emergencyMessage: !isPaused ? "Emergency broadcast active." : null
                     })
                   });
-                  if (res.ok) alert("Queue Paused & Broadcast Sent!");
+                  if (res.ok) {
+                    alert(!isPaused ? "Queue Paused & Broadcast Sent!" : "Queue Resumed!");
+                    fetchMyClinics(); // refresh local state
+                  }
                 } catch (err) {
-                  alert("Failed to pause queue");
+                  alert("Failed to toggle queue state");
                 }
               };
 
@@ -74,10 +80,9 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
                   key={index}
                   activeOpacity={0.8}
                   onPress={handleEmergency}
-                  style={styles.premiumButton}
+                  style={[styles.premiumButton, isPaused && { backgroundColor: "#059669", shadowColor: "#059669" }]}
                 >
-                  <Text style={styles.premiumText}>Pause Q</Text>
-                  <Ionicons name="alert-circle" size={16} color="#FFF" />
+                  <Text style={styles.premiumText}>{isPaused ? "Resume ▶️" : "Pause Q 🚨"}</Text>
                 </TouchableOpacity>
               );
             }

@@ -8,12 +8,19 @@ import {
   joinQueue,
   createQueue,
   deleteQueue,
+  getHistory,
+  completePatient,
+  skipPatient,
+  togglePause,
 } from "../controllers/queue.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { requireRole } from "../middleware/role.middleware";
 
 
 const router = Router();
+
+// GET History (Must come before /:clinicId to avoid matching 'history' as an ID)
+router.get("/history", requireAuth, getHistory);
 
 // 1. GET Queue (Specific Clinic)
 router.get("/:clinicId", getQueue);
@@ -43,4 +50,10 @@ router.delete(
   deleteQueue
 );
 
+// 4. Complete 
+router.post("/:clinicId/complete", completePatient);
+// 5. Skip
+router.post("/:clinicId/skip", skipPatient);
+// 6. Pause
+router.post("/:clinicId/toggle-pause", togglePause);
 export default router;

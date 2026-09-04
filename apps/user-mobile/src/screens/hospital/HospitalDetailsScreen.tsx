@@ -139,7 +139,7 @@ export default function HospitalDetailsScreen() {
 
               <TouchableOpacity 
                 style={styles.bookBtn}
-                onPress={() => navigation.navigate("Queue", { clinicId: id, clinicName: hospital.name, doctorId: doc.id })}
+                onPress={() => navigation.navigate("LiveTracking", { clinicId: id, clinicName: hospital.name, doctorId: doc.id })}
                 activeOpacity={0.8}
               >
                 <Text style={styles.bookBtnText}>Take My Spot</Text>

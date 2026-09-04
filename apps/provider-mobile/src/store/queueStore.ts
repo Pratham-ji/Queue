@@ -24,6 +24,7 @@ export interface ClinicInfo {
   memberRole: string;
   isPrimary: boolean;
   isEmergencyPause: boolean;
+  emergencyMessage: string | null;
 }
 
 interface QueueState {
@@ -212,16 +213,21 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       set({ currentPatient: patient });
     });
 
-    const { activeClinicId } = get();
-    if (activeClinicId) {
-      socket.off(`clinic_emergency_${activeClinicId}`);
-      socket.on(`clinic_emergency_${activeClinicId}`, (data: { isEmergencyPause: boolean }) => {
-        const { activeClinic } = get();
-        if (activeClinic) {
-          set({ activeClinic: { ...activeClinic, isEmergencyPause: data.isEmergencyPause } });
-        }
-      });
-    }
+    socket.off("queue_paused");
+    socket.on("queue_paused", (data: { reason: string }) => {
+      const { activeClinic } = get();
+      if (activeClinic) {
+        set({ activeClinic: { ...activeClinic, isEmergencyPause: true, emergencyMessage: data.reason } });
+      }
+    });
+
+    socket.off("queue_resumed");
+    socket.on("queue_resumed", () => {
+      const { activeClinic } = get();
+      if (activeClinic) {
+        set({ activeClinic: { ...activeClinic, isEmergencyPause: false, emergencyMessage: null } });
+      }
+    });
 
     // Re-join room on reconnect (using dynamic ID)
     socket.off("reconnect");

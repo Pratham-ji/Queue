@@ -50,21 +50,74 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
             if (route.name === "Emergency") {
               const handleEmergency = () => {
                 if (!activeClinic?.id) return;
-                try {
-                  const { socket } = require("../../services/api");
-                  
-                  if (!isPaused) {
-                    socket.emit('queue_pause', { clinicId: activeClinic.id });
-                  } else {
-                    socket.emit('queue_resume', { clinicId: activeClinic.id });
+                
+                const performPause = async (reason: string) => {
+                  try {
+                    // Optimistic update
+                    useQueueStore.setState({
+                      activeClinic: { ...activeClinic, isEmergencyPause: true }
+                    });
+                    
+                    const { api } = require("../../services/api");
+                    await api.post(`/queue/${activeClinic.id}/toggle-pause`, {
+                      isPaused: true,
+                      reason
+                    });
+                  } catch (err) {
+                    alert("Failed to toggle queue state");
+                    // Revert on error
+                    useQueueStore.setState({
+                      activeClinic: { ...activeClinic, isEmergencyPause: false }
+                    });
                   }
-                  
-                  // Optimistic update for instant feel
-                  useQueueStore.setState({
-                    activeClinic: { ...activeClinic, isEmergencyPause: !isPaused }
-                  });
-                } catch (err) {
-                  alert("Failed to toggle queue state");
+                };
+
+                const performResume = async () => {
+                  try {
+                    useQueueStore.setState({
+                      activeClinic: { ...activeClinic, isEmergencyPause: false }
+                    });
+                    
+                    const { api } = require("../../services/api");
+                    await api.post(`/queue/${activeClinic.id}/toggle-pause`, {
+                      isPaused: false
+                    });
+                  } catch (err) {
+                    alert("Failed to resume queue");
+                    useQueueStore.setState({
+                      activeClinic: { ...activeClinic, isEmergencyPause: true }
+                    });
+                  }
+                };
+
+                if (isPaused) {
+                  performResume();
+                } else {
+                  const { ActionSheetIOS, Platform, Alert } = require("react-native");
+                  if (Platform.OS === "ios") {
+                    ActionSheetIOS.showActionSheetWithOptions(
+                      {
+                        options: ["Cancel", "🚨 Emergency (Pause Queue)", "☕ Doctor on Break"],
+                        cancelButtonIndex: 0,
+                        title: "Pause Queue",
+                        message: "Select a reason for pausing the queue",
+                      },
+                      (buttonIndex: number) => {
+                        if (buttonIndex === 1) performPause("EMERGENCY");
+                        if (buttonIndex === 2) performPause("BREAK");
+                      }
+                    );
+                  } else {
+                    Alert.alert(
+                      "Pause Queue",
+                      "Select a reason for pausing the queue",
+                      [
+                        { text: "Cancel", style: "cancel" },
+                        { text: "🚨 Emergency (Pause Queue)", onPress: () => performPause("EMERGENCY") },
+                        { text: "☕ Doctor on Break", onPress: () => performPause("BREAK") },
+                      ]
+                    );
+                  }
                 }
               };
 

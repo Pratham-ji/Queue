@@ -321,3 +321,141 @@ export const deleteQueue = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ success: false, error: "Failed to delete from queue" });
   }
 };
+
+// ==========================================
+// GET HISTORY (Past Visits for the User)
+// ==========================================
+export const getHistory = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User not found" });
+    }
+
+    // Find patients linked to this user's phone or name who are COMPLETED
+    const pastVisits = await prisma.patient.findMany({
+      where: {
+        OR: [
+          { phone: user.phone || "___unlikely_match___" },
+          { name: user.name }
+        ],
+        status: "COMPLETED"
+      },
+      include: {
+        clinic: {
+          select: { name: true, city: true }
+        }
+      },
+      orderBy: { completedTime: "desc" }
+    });
+
+    res.status(200).json({ success: true, data: pastVisits });
+  } catch (error) {
+    console.error("getHistory error:", error);
+    res.status(500).json({ success: false, error: "Server Error" });
+  }
+};
+
+// ==========================================
+// COMPLETE PATIENT
+// ==========================================
+export const completePatient = async (req: Request, res: Response) => {
+  try {
+    const clinicId = req.params.clinicId as string;
+    const current = await prisma.patient.findFirst({
+      where: { clinicId, status: "SERVING" },
+      orderBy: { servedTime: "desc" }
+    });
+
+    if (current) {
+      await prisma.patient.update({
+        where: { id: current.id },
+        data: { status: "COMPLETED", completedTime: new Date() }
+      });
+    }
+
+    const io = req.app.get("io");
+    const remainingQueue = await prisma.patient.findMany({
+      where: { clinicId, status: "WAITING" },
+      orderBy: { token: "asc" }
+    });
+
+    io.to(clinicId).emit("queue_update", remainingQueue);
+    // Explicitly notify that current is cleared
+    io.to(clinicId).emit("current_patient", null);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Complete failed" });
+  }
+};
+
+// ==========================================
+// SKIP PATIENT
+// ==========================================
+export const skipPatient = async (req: Request, res: Response) => {
+  try {
+    const clinicId = req.params.clinicId as string;
+    const current = await prisma.patient.findFirst({
+      where: { clinicId, status: "SERVING" },
+      orderBy: { servedTime: "desc" }
+    });
+
+    if (current) {
+      // Move them back to waiting, but bump their token up slightly so they are next or at end.
+      // Usually "skipped" patients just get marked MISSED, or put back to WAITING with a slightly delayed token.
+      // We'll mark them MISSED for now, or just move them back. Let's mark as MISSED.
+      await prisma.patient.update({
+        where: { id: current.id },
+        data: { status: "MISSED" }
+      });
+    }
+
+    const io = req.app.get("io");
+    const remainingQueue = await prisma.patient.findMany({
+      where: { clinicId, status: "WAITING" },
+      orderBy: { token: "asc" }
+    });
+
+    io.to(clinicId).emit("queue_update", remainingQueue);
+    io.to(clinicId).emit("current_patient", null);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Skip failed" });
+  }
+};
+
+// ==========================================
+// TOGGLE PAUSE
+// ==========================================
+export const togglePause = async (req: Request, res: Response) => {
+  try {
+    const clinicId = req.params.clinicId as string;
+    const { isPaused, reason } = req.body; // reason = "EMERGENCY" | "BREAK"
+
+    await prisma.clinic.update({
+      where: { id: clinicId },
+      data: {
+        isEmergencyPause: isPaused,
+        emergencyMessage: isPaused ? reason : null
+      }
+    });
+
+    const io = req.app.get("io");
+    if (isPaused) {
+      io.to(clinicId).emit("queue_paused", { reason });
+    } else {
+      io.to(clinicId).emit("queue_resumed");
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Toggle pause failed" });
+  }
+};

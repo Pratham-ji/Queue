@@ -88,9 +88,11 @@ export default function HomeScreen() {
 
           <View style={styles.badgeRow}>
             {clinic.isEmergencyPause ? (
-              <View style={[styles.badge, { backgroundColor: "#FEF2F2", borderColor: "#FECACA" }]}>
-                <View style={[styles.dot, { backgroundColor: "#EF4444" }]} />
-                <Text style={[styles.badgeText, { color: "#B91C1C" }]}>Paused (Emergency)</Text>
+              <View style={[styles.badge, clinic.emergencyMessage === 'EMERGENCY' ? { backgroundColor: "#FEF2F2", borderColor: "#FECACA" } : { backgroundColor: "#FEF3C7", borderColor: "#FDE68A" }]}>
+                <View style={[styles.dot, clinic.emergencyMessage === 'EMERGENCY' ? { backgroundColor: "#EF4444" } : { backgroundColor: "#F59E0B" }]} />
+                <Text style={[styles.badgeText, clinic.emergencyMessage === 'EMERGENCY' ? { color: "#B91C1C" } : { color: "#92400E" }]}>
+                  {clinic.emergencyMessage === 'EMERGENCY' ? "Paused (Emergency)" : "Paused (Doctor on Break)"}
+                </Text>
               </View>
             ) : (
               <View style={[styles.badge, { backgroundColor: "#ECFDF5", borderColor: "#A7F3D0" }]}>
@@ -113,12 +115,28 @@ export default function HomeScreen() {
     );
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+  // SKELETON LOADER
+  const renderSkeletonCard = () => (
+    <View style={[styles.clinicCard, { opacity: 0.7 }]} key={Math.random()}>
+      <View style={[styles.clinicImage, { backgroundColor: colors.divider }]} />
+      <View style={styles.clinicInfo}>
+        <View style={{ width: "60%", height: 24, backgroundColor: colors.divider, borderRadius: 4, marginBottom: 8 }} />
+        <View style={{ width: "80%", height: 16, backgroundColor: colors.divider, borderRadius: 4, marginBottom: 16 }} />
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
+          <View style={{ width: 80, height: 24, backgroundColor: colors.divider, borderRadius: 8 }} />
+          <View style={{ width: 60, height: 24, backgroundColor: colors.divider, borderRadius: 8 }} />
+        </View>
+        <View style={{ width: "100%", height: 20, backgroundColor: colors.divider, borderRadius: 4 }} />
       </View>
-    );
+    </View>
+  );
+
+  const currentHour = new Date().getHours();
+  let greeting = "Good Morning 🌅";
+  if (currentHour >= 12 && currentHour < 17) {
+    greeting = "Good Afternoon ☀️";
+  } else if (currentHour >= 17) {
+    greeting = "Good Evening 🌙";
   }
 
   return (
@@ -128,13 +146,18 @@ export default function HomeScreen() {
       {/* HEADER */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Good Morning 👋</Text>
+          <Text style={styles.greeting}>{greeting}</Text>
           <Text style={styles.title}>Find Care Near You</Text>
         </View>
-        <Image
-          source={{ uri: "https://i.pravatar.cc/150?u=user" }}
-          style={styles.userAvatar}
-        />
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Profile")}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Image
+            source={{ uri: "https://i.pravatar.cc/150?u=user" }}
+            style={styles.userAvatar}
+          />
+        </TouchableOpacity>
       </View>
 
       {/* SEARCH BAR */}
@@ -157,7 +180,13 @@ export default function HomeScreen() {
         <Text style={styles.sectionTitle}>Recommended Clinics</Text>
 
         <View style={styles.listContainer}>
-          {clinics.length > 0 ? (
+          {loading ? (
+            <>
+              {renderSkeletonCard()}
+              {renderSkeletonCard()}
+              {renderSkeletonCard()}
+            </>
+          ) : clinics.length > 0 ? (
             clinics.map((clinic) => renderClinicCard(clinic))
           ) : (
             <View style={styles.emptyState}>

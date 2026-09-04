@@ -70,7 +70,7 @@ const DashboardHeader = ({ navigation, isOnline, toggleOnline, greeting, userNam
 );
 
 export default function DashboardScreen({ navigation }: any) {
-  const { currentPatient, isOnline, toggleOnline, callNextPatient, queue, fetchMyClinics, fetchQueue, activeClinic, allClinics, setActiveClinic } =
+  const { currentPatient, isOnline, toggleOnline, callNextPatient, queue, fetchMyClinics, fetchQueue, activeClinic, activeClinicId, allClinics, setActiveClinic } =
     useQueueStore();
   const [userName, setUserName] = React.useState("Doctor");
 
@@ -304,10 +304,14 @@ export default function DashboardScreen({ navigation }: any) {
                     `Move ${currentPatient.name} down one spot?`,
                     [
                       { text: "Cancel", style: "cancel" },
-                      { text: "Skip", style: "destructive", onPress: () => {
-                        // TODO: PATCH queue order in Prisma
-                        handleCallNext();
-                        Alert.alert("Skipped ⏳", "Patient moved down. Next patient called.");
+                      { text: "Skip", style: "destructive", onPress: async () => {
+                        try {
+                          const { api } = require("../../services/api");
+                          await api.post(`/queue/${activeClinicId}/skip`);
+                          Alert.alert("Skipped ⏳", "Patient moved down. Next patient called.");
+                        } catch (err) {
+                          Alert.alert("Error", "Failed to skip patient.");
+                        }
                       }},
                     ]
                   );
@@ -325,8 +329,15 @@ export default function DashboardScreen({ navigation }: any) {
                   if (!currentPatient) return Alert.alert("No Patient", "Call a patient first.");
                   // Sync vitals before clearing
                   if (weight || bp) await handleSyncVitals();
-                  handleCallNext();
-                  Alert.alert("Completed ✅", "Session saved. Ready for next patient.");
+                  try {
+                    const { api } = require("../../services/api");
+                    await api.post(`/queue/${activeClinicId}/complete`);
+                    setWeight("");
+                    setBp("");
+                    Alert.alert("Completed ✅", "Session saved. Ready for next patient.");
+                  } catch (err) {
+                    Alert.alert("Error", "Failed to complete patient.");
+                  }
                 }}
               >
                 <Ionicons name="checkmark-circle-outline" size={20} color="#10B981" />

@@ -182,12 +182,20 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
       get().refreshData(); // Force sync
     });
 
-    // C. Emergency Pause Update
-    socket.off(`clinic_emergency_${activeClinicId}`);
-    socket.on(`clinic_emergency_${activeClinicId}`, (data: { isEmergencyPause: boolean, emergencyMessage: string | null }) => {
+    // C. Queue Paused / Resumed (Emergency & Break)
+    socket.off("queue_paused");
+    socket.on("queue_paused", (data: { reason: string }) => {
       set({
-        isEmergencyPause: data.isEmergencyPause,
-        emergencyMessage: data.emergencyMessage
+        isEmergencyPause: true,
+        emergencyMessage: data.reason
+      });
+    });
+
+    socket.off("queue_resumed");
+    socket.on("queue_resumed", () => {
+      set({
+        isEmergencyPause: false,
+        emergencyMessage: null
       });
     });
 

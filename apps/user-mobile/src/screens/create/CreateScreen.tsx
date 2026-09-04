@@ -19,7 +19,7 @@ import { useNavigation } from "@react-navigation/native";
 import { api } from "../../services/api";
 
 const COLORS = {
-  primary: "#7C3AED", // Vibrant Violet
+  primary: "#059669", // Vibrant Emerald
   bg: "#F8FAFC",
   text: "#0F172A",
   subText: "#64748B",

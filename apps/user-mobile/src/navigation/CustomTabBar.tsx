@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform, Dimensions } from "
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
+import * as Animatable from "react-native-animatable";
 
 const { width } = Dimensions.get("window");
 
@@ -75,20 +75,18 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
 }
 
 const AnimatedTabIcon = ({ isFocused, onPress, label, iconName }: any) => {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-    };
-  });
+  const viewRef = React.useRef<any>(null);
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.85, { damping: 10, stiffness: 300 });
+    if (viewRef.current) {
+      viewRef.current.animate({ 0: { scale: 1 }, 1: { scale: 0.85 } }, 150);
+    }
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 10, stiffness: 300 });
+    if (viewRef.current) {
+      viewRef.current.animate({ 0: { scale: 0.85 }, 1: { scale: 1 } }, 150);
+    }
     onPress();
   };
 
@@ -99,12 +97,12 @@ const AnimatedTabIcon = ({ isFocused, onPress, label, iconName }: any) => {
       onPressOut={handlePressOut}
       style={styles.tabButton}
     >
-      <Animated.View style={[styles.tabContent, animatedStyle]}>
+      <Animatable.View ref={viewRef} style={styles.tabContent} useNativeDriver>
         <Ionicons name={iconName} size={22} color={isFocused ? "#0D9488" : "#94A3B8"} />
         <Text style={[styles.tabLabel, { color: isFocused ? "#0D9488" : "#94A3B8" }]}>
           {label}
         </Text>
-      </Animated.View>
+      </Animatable.View>
     </TouchableOpacity>
   );
 };

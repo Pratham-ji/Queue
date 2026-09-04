@@ -53,3 +53,41 @@ export const getClinicDetails = async (req: Request, res: Response) => {
       .json({ success: false, error: "Failed to fetch clinic details" });
   }
 };
+
+// 4. GET DOCTOR DETAILS (Includes static slots for now)
+export const getDoctorDetails = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const doctor = await prisma.doctorProfile.findUnique({
+      where: { id },
+      include: { clinic: true },
+    });
+
+    if (!doctor) {
+      return res.status(404).json({ success: false, error: "Doctor not found" });
+    }
+
+    // Generate dynamic slots starting from tomorrow
+    const dates = [];
+    for (let i = 1; i <= 7; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      dates.push({
+        day: d.toLocaleDateString("en-US", { weekday: "short" }),
+        date: d.getDate().toString(),
+        fullDate: d.toISOString().split("T")[0],
+      });
+    }
+
+    const slots = [
+      "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM",
+      "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM",
+      "06:00 PM", "06:30 PM", "07:00 PM", "07:30 PM"
+    ];
+
+    res.json({ success: true, data: doctor, dates, slots });
+  } catch (error) {
+    console.error("getDoctorDetails error:", error);
+    res.status(500).json({ success: false, error: "Failed to fetch doctor" });
+  }
+};

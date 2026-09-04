@@ -1,269 +1,64 @@
-import React, { useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
+  TouchableOpacity,
   ActivityIndicator,
-  StatusBar,
-  RefreshControl,
+  TextInput,
   ScrollView,
-  Dimensions,
-  Platform,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import * as Animatable from "react-native-animatable";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useUserQueueStore } from "../../store/userQueueStore";
 
-const { width } = Dimensions.get("window");
-
-// 🎨 UNICORN THEME COLORS
 const COLORS = {
-  primary: "#10B981",
-  dark: "#047857",
-  bg: "#F8FAFC",
-  text: "#0F172A",
-  subText: "#64748B",
+  primary: "#059669",
   white: "#FFFFFF",
-  inputBg: "#F1F5F9",
+  bg: "#F8FAFC",
+  textMain: "#0F172A",
+  subText: "#64748B",
   border: "#E2E8F0",
-  error: "#EF4444",
 };
 
-export default function LiveTrackingScreen({ route }: any) {
-  const navigation = useNavigation();
-  const [name, setName] = useState("");
+
+export default function LiveTrackingScreen() {
+  const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  
   const {
-    joinQueue,
-    leaveQueue,
+    queueStatus,
     activeToken,
     activeClinicId,
-    setClinic,
+    joinQueue,
+    leaveQueue,
     peopleAhead,
-    queueStatus,
-    isLoading,
-    refreshData,
-    loadSession,
     estimatedWait,
     currentServingToken,
-    isOffline, // NetInfo Network Offline
-    isClinicOffline,
+    isLoading,
     isEmergencyPause,
     emergencyMessage,
-    activePrescription,
   } = useUserQueueStore();
 
-  // Accept clinicId from navigation params (from HospitalDetails)
-  const routeClinicId = route?.params?.clinicId;
-  const clinicName = route?.params?.clinicName || "Clinic";
+  const [name, setName] = useState("");
+  const clinicName = route?.params?.clinicName || "General Department";
 
-  // 🔄 Set clinic from navigation params + restore session
-  useFocusEffect(
-    useCallback(() => {
-      if (routeClinicId) {
-        setClinic(routeClinicId);
-      }
-      loadSession();
-      refreshData();
-    }, [routeClinicId]),
-  );
-
-  return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
-
-      {isOffline && (
-        <View style={styles.offlineBanner}>
-          <ActivityIndicator size="small" color="#FFF" style={{ marginRight: 8 }} />
-          <Text style={styles.offlineText}>Offline - Reconnecting...</Text>
-        </View>
-      )}
-
-      {/* 🟢 HEADER WITH SMART BACK BUTTON */}
-      <View style={styles.header}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          {/* Only show Back Button if we pushed this screen (not via Tab) */}
-          {navigation.canGoBack() && (
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.backBtn}
-            >
-              <Ionicons name="arrow-back" size={24} color={COLORS.text} />
-            </TouchableOpacity>
-          )}
-          <Text style={styles.headerTitle}>Queue Dashboard</Text>
-        </View>
-
-        {queueStatus === "JOINED" && (
-          <TouchableOpacity onPress={refreshData} style={styles.refreshBtn}>
-            <Ionicons name="refresh" size={20} color={COLORS.primary} />
+  if (queueStatus !== "JOINED") {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.textMain} />
           </TouchableOpacity>
-        )}
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={isLoading}
-            onRefresh={refreshData}
-            colors={[COLORS.primary]}
-          />
-        }
-      >
-        {/* CLINIC / DOCTOR CARD */}
-        <View style={styles.doctorCard}>
-          <View style={styles.docRow}>
-            <View style={styles.docAvatar}>
-              <Ionicons name="business" size={24} color={COLORS.primary} />
-            </View>
-            <View>
-              <Text style={styles.docName}>{clinicName || "Queue Dashboard"}</Text>
-              <Text style={styles.docSub}>{activeClinicId ? "Live Queue Tracker" : "Select a clinic to join"}</Text>
-            </View>
-          </View>
-          <View style={[
-            styles.statusPill, 
-            isClinicOffline ? { backgroundColor: "#FEE2E2" } : 
-            isEmergencyPause ? (emergencyMessage === 'EMERGENCY' ? { backgroundColor: "#FEE2E2" } : { backgroundColor: "#FEF3C7" }) : {}
-          ]}>
-            <View style={[
-              styles.statusDot, 
-              isClinicOffline ? { backgroundColor: "#EF4444" } : 
-              isEmergencyPause ? (emergencyMessage === 'EMERGENCY' ? { backgroundColor: "#EF4444" } : { backgroundColor: "#F59E0B" }) : {}
-            ]} />
-            <Text style={[
-              styles.statusText,
-              isClinicOffline ? { color: "#991B1B" } : 
-              isEmergencyPause ? (emergencyMessage === 'EMERGENCY' ? { color: "#991B1B" } : { color: "#92400E" }) : {}
-            ]}>
-              {!activeClinicId ? "No Clinic Selected" :
-               isClinicOffline ? "Doctor is Offline" :
-               isEmergencyPause ? (emergencyMessage === 'EMERGENCY' ? "Paused (Emergency)" : "Paused (Doctor on Break)") :
-               currentServingToken ? `Serving Token #${currentServingToken}` : "Clinic is Live"}
-            </Text>
-          </View>
         </View>
-
-        {isEmergencyPause && queueStatus === "JOINED" && (
-          <Animatable.View animation="pulse" easing="ease-out" iterationCount="infinite" style={[styles.emergencyBanner, emergencyMessage === 'EMERGENCY' ? { backgroundColor: "#FEE2E2" } : {}]}>
-            <Ionicons name="warning" size={20} color={emergencyMessage === 'EMERGENCY' ? "#991B1B" : "#92400E"} />
-            <Text style={[styles.emergencyText, emergencyMessage === 'EMERGENCY' ? { color: "#991B1B" } : {}]}>
-              {emergencyMessage === 'EMERGENCY' ? "Doctor stepped out for an emergency. Your spot is secured." : "Doctor is on a short break. Your spot is secured."}
-            </Text>
-          </Animatable.View>
-        )}
-
-        {activePrescription ? (
-          // 💊 PRESCRIPTION READY (PHARMACY HANDOFF)
-          <Animatable.View animation="bounceIn" duration={800} style={styles.trackerContainer}>
-            <View style={[styles.ticketHeader, { backgroundColor: "#F0FDF4", borderRadius: 20, padding: 20, marginBottom: 20 }]}>
-              <Ionicons name="medical" size={40} color={COLORS.primary} style={{ marginBottom: 10 }} />
-              <Text style={[styles.ticketLabel, { color: COLORS.primary }]}>PRESCRIPTION READY</Text>
-              <Text style={{ fontSize: 16, textAlign: "center", color: COLORS.text, marginVertical: 10 }}>
-                Please proceed to the pharmacy and show this secure code to collect your medicines.
-              </Text>
-              <View style={{ backgroundColor: "#FFF", paddingHorizontal: 30, paddingVertical: 15, borderRadius: 15, borderWidth: 2, borderColor: COLORS.primary, borderStyle: "dashed", marginTop: 10 }}>
-                <Text style={{ fontSize: 42, fontWeight: "900", letterSpacing: 8, color: COLORS.primary, textAlign: "center" }}>
-                  {activePrescription.otpCode}
-                </Text>
-              </View>
-            </View>
-
-            <View style={{ backgroundColor: COLORS.inputBg, borderRadius: 16, padding: 20 }}>
-              <Text style={{ fontWeight: "700", marginBottom: 10, color: COLORS.text }}>Prescribed Medicines:</Text>
-              {activePrescription.medicines?.map((m: any, idx: number) => (
-                <View key={idx} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border }}>
-                  <Text style={{ fontWeight: "600", color: COLORS.text }}>{m.name}</Text>
-                  <Text style={{ color: COLORS.subText }}>{m.dosage} • {m.duration}</Text>
-                </View>
-              ))}
-            </View>
-          </Animatable.View>
-        ) : queueStatus === "JOINED" ? (
-          // 🎫 ZOMATO-STYLE ORDER TRACKER
-          <Animatable.View animation="fadeInUp" duration={500} style={styles.trackerContainer}>
-            
-            <View style={styles.ticketHeader}>
-              <Text style={styles.ticketLabel}>YOUR POSITION</Text>
-              <Animatable.Text 
-                animation="pulse" 
-                iterationCount="infinite" 
-                direction="alternate" 
-                style={styles.bigToken}
-              >
-                #{peopleAhead + 1}
-              </Animatable.Text>
-              <View style={styles.statsBadgeRow}>
-                <View style={styles.glassBadge}>
-                  <Text style={styles.badgeText}>Now Serving: #{currentServingToken}</Text>
-                </View>
-                <View style={[styles.glassBadge, { backgroundColor: "rgba(16, 185, 129, 0.2)" }]}>
-                  <Ionicons name="time" size={14} color={COLORS.primary} />
-                  <Text style={[styles.badgeText, { color: COLORS.primary }]}>~{estimatedWait}m Wait</Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.trackerTimeline}>
-              {/* STEP 1: In Queue */}
-              <View style={styles.timelineStep}>
-                <View style={[styles.stepCircle, { backgroundColor: COLORS.primary }]}>
-                  <Ionicons name="checkmark" size={16} color="#FFF" />
-                </View>
-                <View style={styles.stepContent}>
-                  <Text style={styles.stepTitle}>Joined Queue</Text>
-                  <Text style={styles.stepDesc}>You are currently waiting.</Text>
-                </View>
-              </View>
-              <View style={[styles.timelineLine, { backgroundColor: peopleAhead <= 1 ? COLORS.primary : COLORS.border }]} />
-
-              {/* STEP 2: Waiting Area */}
-              <View style={styles.timelineStep}>
-                <View style={[styles.stepCircle, { backgroundColor: peopleAhead <= 1 ? COLORS.primary : COLORS.border }]}>
-                  {peopleAhead <= 1 && <Ionicons name="checkmark" size={16} color="#FFF" />}
-                </View>
-                <View style={styles.stepContent}>
-                  <Text style={[styles.stepTitle, { color: peopleAhead <= 1 ? COLORS.text : COLORS.subText }]}>In Waiting Area</Text>
-                  <Text style={styles.stepDesc}>{peopleAhead <= 1 ? "Get ready, you're next!" : "Waiting for your turn..."}</Text>
-                </View>
-              </View>
-              <View style={[styles.timelineLine, { backgroundColor: peopleAhead === 0 ? COLORS.primary : COLORS.border }]} />
-
-              {/* STEP 3: Doctor's Desk */}
-              <View style={styles.timelineStep}>
-                <View 
-                  style={[
-                    styles.stepCircle, 
-                    { backgroundColor: peopleAhead === 0 ? COLORS.primary : COLORS.border }
-                  ]}
-                >
-                  {peopleAhead === 0 && <Ionicons name="checkmark" size={16} color="#FFF" />}
-                </View>
-                <View style={styles.stepContent}>
-                  <Text style={[styles.stepTitle, { color: peopleAhead === 0 ? COLORS.text : COLORS.subText }]}>Doctor's Desk</Text>
-                  <Text style={styles.stepDesc}>{peopleAhead === 0 ? "Please head into the doctor's room." : ""}</Text>
-                </View>
-              </View>
-            </View>
-
-            <TouchableOpacity style={styles.cancelBtn} onPress={leaveQueue}>
-              <Text style={styles.cancelText}>Cancel Ticket</Text>
-            </TouchableOpacity>
-          </Animatable.View>
-        ) : (
-          // 📝 JOIN FORM
-          <Animatable.View
-            animation="fadeInUp"
-            duration={500}
-            style={styles.formCard}
-          >
+        <View style={styles.formContainer}>
+          <Animatable.View animation="fadeInUp" duration={500} style={styles.formCard}>
             <Text style={styles.formTitle}>Check In</Text>
             <Text style={styles.formSub}>Join the {clinicName} queue instantly.</Text>
-
+            
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Patient Name</Text>
               <TextInput
@@ -280,264 +75,180 @@ export default function LiveTrackingScreen({ route }: any) {
               onPress={() => joinQueue(name, "0000000000")}
               disabled={!name.trim() || isLoading}
             >
-              {isLoading ? (
-                <ActivityIndicator color="#FFF" />
-              ) : (
-                <Text style={styles.joinText}>Take My Spot</Text>
-              )}
+              {isLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.joinText}>Take My Spot</Text>}
             </TouchableOpacity>
           </Animatable.View>
-        )}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Live Tracker State
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
+        {/* HERO TRACKER */}
+        <Animatable.View animation="fadeInDown" duration={600} style={styles.heroCard}>
+          <Text style={styles.hospitalName}>{clinicName}</Text>
+          
+          {isEmergencyPause ? (
+            <View style={[styles.waitPill, { backgroundColor: "#FEF2F2" }]}>
+              <Ionicons name="warning" size={14} color="#EF4444" style={{ marginRight: 6 }} />
+              <Text style={[styles.waitText, { color: "#B91C1C" }]}>{emergencyMessage === "EMERGENCY" ? "Emergency Pause" : "Doctor on Break"}</Text>
+            </View>
+          ) : (
+            <View style={styles.waitPill}>
+              <Ionicons name="time" size={14} color={COLORS.primary} style={{ marginRight: 6 }} />
+              <Text style={styles.waitText}>Est. Wait: {estimatedWait} mins</Text>
+            </View>
+          )}
+
+          <Text style={styles.tokenLabel}>YOUR TOKEN</Text>
+          <Text style={styles.tokenNumber}>#{activeToken}</Text>
+
+          <View style={styles.metricRow}>
+            <View style={styles.metricBox}>
+              <Text style={styles.metricValue}>#{currentServingToken || "--"}</Text>
+              <Text style={styles.metricLabel}>Current Token</Text>
+            </View>
+            <View style={styles.metricDivider} />
+            <View style={styles.metricBox}>
+              <Text style={styles.metricValue}>{peopleAhead}</Text>
+              <Text style={styles.metricLabel}>People Ahead</Text>
+            </View>
+            <View style={styles.metricDivider} />
+            <View style={styles.metricBox}>
+              <Text style={[styles.metricValue, { color: isEmergencyPause ? "#EF4444" : COLORS.primary, fontSize: 14 }]}>
+                {isEmergencyPause ? "PAUSED" : "LIVE"}
+              </Text>
+              <Text style={styles.metricLabel}>Status</Text>
+            </View>
+          </View>
+        </Animatable.View>
+
+        {/* VERTICAL PROGRESS STEPPER */}
+        <Animatable.View animation="fadeInUp" duration={800} delay={200} style={styles.stepperContainer}>
+          <Text style={styles.sectionTitle}>Queue Progress</Text>
+          
+          <View style={styles.stepperItem}>
+            <View style={styles.stepIndicator}>
+              <View style={styles.stepDotActive}>
+                <Ionicons name="checkmark" size={16} color="#FFF" />
+              </View>
+              <View style={styles.stepLineActive} />
+            </View>
+            <View style={styles.stepContent}>
+              <Text style={styles.stepTitleActive}>Checked In</Text>
+              <Text style={styles.stepSub}>Your spot is confirmed</Text>
+            </View>
+          </View>
+
+          <View style={styles.stepperItem}>
+            <View style={styles.stepIndicator}>
+              <Animatable.View animation="pulse" iterationCount="infinite" style={styles.stepDotPulse}>
+                <View style={styles.stepDotInner} />
+              </Animatable.View>
+              <View style={styles.stepLineInactive} />
+            </View>
+            <View style={styles.stepContent}>
+              <Text style={styles.stepTitleActive}>Waiting for Turn</Text>
+              <Text style={styles.stepSub}>
+                {isEmergencyPause ? emergencyMessage === "EMERGENCY" ? "Doctor stepped out for an emergency." : "Doctor is on a short break." : 
+                 currentServingToken ? `Doctor is seeing Token #${currentServingToken}` : "Doctor is preparing..."}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.stepperItem}>
+            <View style={styles.stepIndicator}>
+              <View style={styles.stepDotInactive} />
+            </View>
+            <View style={styles.stepContent}>
+              <Text style={styles.stepTitleInactive}>Consultation</Text>
+              <Text style={styles.stepSubInactive}>Head to the doctor's cabin when called</Text>
+            </View>
+          </View>
+        </Animatable.View>
+
+        {/* ACTION BUTTONS */}
+        <View style={styles.actionsContainer}>
+          <TouchableOpacity style={styles.ghostBtn}>
+            <Ionicons name="call-outline" size={20} color={COLORS.textMain} />
+            <Text style={styles.ghostBtnText}>Contact Reception</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.ghostBtn} onPress={() => {
+            Alert.alert("Leave Queue?", "Are you sure you want to abandon your spot?", [
+              { text: "Cancel", style: "cancel" },
+              { text: "Leave", style: "destructive", onPress: async () => {
+                await leaveQueue();
+                navigation.navigate("Home");
+              }}
+            ]);
+          }}>
+            <Ionicons name="exit-outline" size={20} color="#EF4444" />
+            <Text style={[styles.ghostBtnText, { color: "#EF4444" }]}>Leave Queue</Text>
+          </TouchableOpacity>
+        </View>
+
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
-  scrollContent: { padding: 20 },
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  header: { padding: 20 },
+  backBtn: { width: 40, height: 40, backgroundColor: "#FFF", borderRadius: 12, justifyContent: "center", alignItems: "center", shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
   
-  offlineBanner: {
-    backgroundColor: COLORS.error,
-    padding: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  offlineText: {
-    color: "#FFF",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    marginBottom: 10,
-  },
-  headerTitle: { fontSize: 22, fontWeight: "700", color: COLORS.text },
-  backBtn: {
-    padding: 8,
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  refreshBtn: { padding: 8, backgroundColor: "#E2E8F0", borderRadius: 10 },
-
-  // DOCTOR CARD
-  doctorCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  docRow: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
-  docAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 16,
-    backgroundColor: "#D1FAE5",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 16,
-  },
-  docName: { fontSize: 18, fontWeight: "700", color: COLORS.text },
-  docSub: { fontSize: 14, color: COLORS.subText },
-  statusPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F0FDF4",
-    alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#BBF7D0",
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.primary,
-    marginRight: 8,
-  },
-  statusText: { fontSize: 12, fontWeight: "600", color: COLORS.dark },
-
-  // TRACKER UI (Zomato-Style)
-  emergencyBanner: {
-    backgroundColor: "#FEF3C7",
-    padding: 12,
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "#FCD34D",
-  },
-  emergencyText: {
-    color: "#92400E",
-    fontWeight: "600",
-    fontSize: 13,
-    flex: 1,
-  },
-  trackerContainer: {
-    backgroundColor: COLORS.white,
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  ticketHeader: {
-    alignItems: "center",
-    marginBottom: 32,
-  },
-  ticketLabel: {
-    color: COLORS.subText,
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
-  },
-  bigToken: {
-    fontSize: 64,
-    fontWeight: "800",
-    color: COLORS.text,
-    marginVertical: 8,
-  },
-  statsBadgeRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  glassBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.text,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    gap: 4,
-  },
-  badgeText: { color: "#FFF", fontSize: 13, fontWeight: "700" },
-  
-  trackerTimeline: {
-    paddingLeft: 10,
-  },
-  timelineStep: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  stepCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 2,
-    zIndex: 2,
-  },
-  stepContent: {
-    marginLeft: 16,
-    flex: 1,
-  },
-  stepTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  stepDesc: {
-    fontSize: 14,
-    color: COLORS.subText,
-    lineHeight: 20,
-  },
-  timelineLine: {
-    width: 2,
-    height: 40,
-    marginLeft: 13,
-    marginTop: -8,
-    marginBottom: -8,
-    zIndex: 1,
-  },
-
-  // FORM CARD
-  formCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  formTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: COLORS.text,
-    marginBottom: 6,
-  },
+  // JOIN FORM
+  formContainer: { flex: 1, justifyContent: "center", padding: 24 },
+  formCard: { backgroundColor: "#FFF", padding: 24, borderRadius: 24, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 },
+  formTitle: { fontSize: 24, fontWeight: "800", color: COLORS.textMain, marginBottom: 8 },
   formSub: { fontSize: 14, color: COLORS.subText, marginBottom: 24 },
   inputGroup: { marginBottom: 24 },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.text,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: COLORS.inputBg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: COLORS.text,
-  },
-  joinBtn: {
-    backgroundColor: COLORS.primary,
-    height: 56,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  disabledBtn: { backgroundColor: "#CBD5E1", shadowOpacity: 0 },
+  label: { fontSize: 13, fontWeight: "600", color: COLORS.textMain, marginBottom: 8 },
+  input: { backgroundColor: "#F1F5F9", padding: 16, borderRadius: 12, fontSize: 16, color: COLORS.textMain },
+  joinBtn: { backgroundColor: COLORS.primary, padding: 16, borderRadius: 16, alignItems: "center" },
+  disabledBtn: { backgroundColor: "#94A3B8" },
   joinText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
 
-  // ALERTS
-  alertBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.primary,
-    padding: 16,
-    borderRadius: 16,
-    marginTop: 24,
-    justifyContent: "center",
-    gap: 10,
-  },
-  alertText: { color: "#FFF", fontWeight: "700", fontSize: 14 },
-  helperText: {
-    textAlign: "center",
-    color: COLORS.subText,
-    fontSize: 13,
-    marginTop: 24,
-  },
-  cancelBtn: { marginTop: 20, padding: 12, alignSelf: "center" },
-  cancelText: { color: COLORS.error, fontWeight: "600" },
+  // HERO TRACKER
+  heroCard: { backgroundColor: "#FFF", padding: 24, borderRadius: 24, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 15, elevation: 5, marginBottom: 24 },
+  hospitalName: { fontSize: 15, fontWeight: "600", color: COLORS.subText, marginBottom: 16 },
+  waitPill: { flexDirection: "row", alignItems: "center", backgroundColor: "#ECFDF5", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginBottom: 24 },
+  waitText: { color: COLORS.primary, fontWeight: "700", fontSize: 14 },
+  tokenLabel: { fontSize: 12, fontWeight: "700", color: COLORS.subText, letterSpacing: 1, marginBottom: 4 },
+  tokenNumber: { fontSize: 64, fontWeight: "900", color: COLORS.textMain, letterSpacing: -2, marginBottom: 24 },
+  
+  metricRow: { flexDirection: "row", alignItems: "center", width: "100%", borderTopWidth: 1, borderTopColor: "#F1F5F9", paddingTop: 20 },
+  metricBox: { flex: 1, alignItems: "center" },
+  metricDivider: { width: 1, height: 30, backgroundColor: "#E2E8F0" },
+  metricValue: { fontSize: 20, fontWeight: "800", color: COLORS.textMain, marginBottom: 4 },
+  metricLabel: { fontSize: 11, color: COLORS.subText, fontWeight: "600", textTransform: "uppercase" },
+
+  // STEPPER
+  stepperContainer: { backgroundColor: "#FFF", padding: 24, borderRadius: 24, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 15, elevation: 5, marginBottom: 24 },
+  sectionTitle: { fontSize: 18, fontWeight: "800", color: COLORS.textMain, marginBottom: 20 },
+  stepperItem: { flexDirection: "row", marginBottom: 0 },
+  stepIndicator: { alignItems: "center", width: 30, marginRight: 16 },
+  stepDotActive: { width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.primary, justifyContent: "center", alignItems: "center", zIndex: 2 },
+  stepLineActive: { width: 2, height: 40, backgroundColor: COLORS.primary, marginVertical: 4 },
+  
+  stepDotPulse: { width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(5, 150, 105, 0.2)", justifyContent: "center", alignItems: "center", zIndex: 2 },
+  stepDotInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: COLORS.primary },
+  stepLineInactive: { width: 2, height: 40, backgroundColor: "#E2E8F0", marginVertical: 4 },
+  
+  stepDotInactive: { width: 16, height: 16, borderRadius: 8, backgroundColor: "#E2E8F0", zIndex: 2, marginTop: 4 },
+  
+  stepContent: { flex: 1, paddingBottom: 30 },
+  stepTitleActive: { fontSize: 16, fontWeight: "700", color: COLORS.textMain, marginBottom: 4 },
+  stepTitleInactive: { fontSize: 16, fontWeight: "600", color: "#94A3B8", marginBottom: 4 },
+  stepSub: { fontSize: 14, color: COLORS.subText },
+  stepSubInactive: { fontSize: 14, color: "#CBD5E1" },
+
+  // ACTIONS
+  actionsContainer: { gap: 12 },
+  ghostBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 16, backgroundColor: "#FFF", borderRadius: 16, borderWidth: 1, borderColor: "#E2E8F0", gap: 8 },
+  ghostBtnText: { fontSize: 15, fontWeight: "600", color: COLORS.textMain },
 });

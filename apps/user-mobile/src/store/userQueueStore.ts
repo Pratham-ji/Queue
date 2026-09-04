@@ -91,11 +91,9 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
 
     set({ isLoading: true });
     try {
-      const res = await api.post(`/queue/${activeClinicId}/add`, { 
-        name, 
-        phone,
-        expoPushToken
-      });
+      const payload = { name, phone, expoPushToken };
+      console.log('JOIN QUEUE PAYLOAD:', payload);
+      const res = await api.post(`/queue/${activeClinicId}/add`, payload);
 
       if (res.data.success) {
         const token = res.data.data.token;
@@ -105,8 +103,11 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
         get().initializeSocket();
         get().refreshData();
       }
-    } catch (error) {
-      if (__DEV__) console.error("Join Failed:", error);
+    } catch (error: any) {
+      console.error("Join Failed:", error);
+      import("react-native").then(({ Alert }) => {
+        Alert.alert("Booking Failed", error?.response?.data?.error || error?.response?.data?.message || error.message);
+      });
     } finally {
       set({ isLoading: false });
     }

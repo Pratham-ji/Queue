@@ -6,7 +6,7 @@ import {
   TextInput,
   ScrollView,
   Image,
-  TouchableOpacity,
+  TouchableOpacity, Pressable,
   StatusBar,
   ActivityIndicator,
   Dimensions,
@@ -62,11 +62,10 @@ export default function HomeScreen() {
     const doctorsCount = clinic.doctors?.length || 2;
 
     return (
-      <TouchableOpacity
+      <Pressable
         key={clinic.id}
-        activeOpacity={0.9}
-        style={styles.clinicCard}
-        onPress={() => handleClinicTap(clinic.id, clinic.name)}
+        style={({ pressed }: { pressed: boolean }) => [styles.clinicCard, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
+        onPress={() => navigation.navigate("HospitalDetails", { id: clinic.id, clinicName: clinic.name })}
       >
         <Image 
           source={{ uri: clinic.image || "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2753&auto=format&fit=crop" }} 
@@ -111,7 +110,7 @@ export default function HomeScreen() {
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </View>
         </View>
-      </TouchableOpacity>
+      </Pressable>
     );
   };
 

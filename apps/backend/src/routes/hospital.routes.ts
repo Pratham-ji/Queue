@@ -1,8 +1,8 @@
 import express from "express";
-import {
   getClinics,
   getDoctors,
   getClinicDetails,
+  getDoctorDetails,
 } from "../controllers/hospital.controller";
 
 const router = express.Router();
@@ -13,3 +13,4 @@ router.get("/clinics/:id", getClinicDetails);
 router.get("/doctors", getDoctors);
 
 export default router;
+router.get("/doctors/:id", getDoctorDetails);

@@ -8,8 +8,10 @@ import OTPVerificationScreen from "../screens/auth/OTPVerificationScreen";
 import HospitalDetailsScreen from "../screens/hospital/HospitalDetailsScreen";
 import CustomSessionScreen from "../screens/create/CustomSessionScreen";
 import QueueScreen from "../screens/queue/QueueScreen";
+import LiveTrackingScreen from "../screens/queue/LiveTrackingScreen";
 import BookingScreen from "../screens/booking/BookingScreen";
 import ChatScreen from "../screens/telehealth/ChatScreen";
+import ProfileScreen from "../screens/profile/ProfileScreen";
 import { useUserQueueStore } from "../store/userQueueStore";
 
 export type RootStackParamList = {
@@ -18,9 +20,10 @@ export type RootStackParamList = {
   Main: undefined;
   HospitalDetails: { id: string };
   Queue: { clinicId?: string; clinicName?: string } | undefined;
+  LiveTracking: { clinicId?: string; clinicName?: string; doctorId?: string };
   Booking: { doctorId: string }; // ✅ ADD THIS
   ChatScreen: { threadId: string; profile: any; isActive: boolean }; // ✅ TELEHEALTH
-  
+  Profile: undefined;
   CustomSession: { session: any; role: string; participant?: any };
 };
 
@@ -59,6 +62,12 @@ export default function RootNavigator() {
       />
 
       <Stack.Screen
+        name="LiveTracking"
+        component={LiveTrackingScreen}
+        options={{ animation: "slide_from_right" }}
+      />
+
+      <Stack.Screen
         name="CustomSession"
         component={CustomSessionScreen}
         options={{ headerShown: false }}
@@ -77,6 +86,11 @@ export default function RootNavigator() {
       <Stack.Screen
         name="ChatScreen"
         component={ChatScreen}
+        options={{ animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="Profile"
+        component={ProfileScreen}
         options={{ animation: "slide_from_right" }}
       />
     </Stack.Navigator>

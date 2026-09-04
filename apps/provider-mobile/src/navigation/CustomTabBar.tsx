@@ -48,28 +48,21 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
 
             // Premium Action Button (Far Right)
             if (route.name === "Emergency") {
-              const handleEmergency = async () => {
+              const handleEmergency = () => {
                 if (!activeClinic?.id) return;
                 try {
-                  const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
-                  const token = await AsyncStorage.getItem("access_token");
-
-                  const res = await fetch("http://13.201.230.245:5001/api/provider/emergency", {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                      "Authorization": `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                      clinicId: activeClinic.id,
-                      isEmergencyPause: !isPaused,
-                      emergencyMessage: !isPaused ? "Emergency broadcast active." : null
-                    })
-                  });
-                  if (res.ok) {
-                    alert(!isPaused ? "Queue Paused & Broadcast Sent!" : "Queue Resumed!");
-                    fetchMyClinics(); // refresh local state
+                  const { socket } = require("../../services/api");
+                  
+                  if (!isPaused) {
+                    socket.emit('queue_pause', { clinicId: activeClinic.id });
+                    // alert("Queue Paused & Broadcast Sent!"); // Option to remove alert for fluid feeling
+                  } else {
+                    socket.emit('queue_resume', { clinicId: activeClinic.id });
                   }
+                  
+                  // Optimistic update via store if desired, but store listens to socket.
+                  // For instant feel, we could manually update store here, but we'll let socket handle it 
+                  // or just wait for the round trip which is ~50ms.
                 } catch (err) {
                   alert("Failed to toggle queue state");
                 }
@@ -147,21 +140,24 @@ const AnimatedTabIcon = ({ isFocused, onPress, label, iconName }: any) => {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    bottom: 25,
-    alignSelf: "center",
-    width: "92%",
+    bottom: 20,
+    left: 20,
+    right: 20,
+    zIndex: 100,
     borderRadius: 40,
-    backgroundColor: "rgba(15, 23, 42, 0.95)", // Slate 900
+    backgroundColor: "transparent", 
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
     shadowRadius: 20,
     elevation: 10,
-    overflow: "hidden", 
   },
   blurContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
+    borderRadius: 40,
+    overflow: "hidden",
+    backgroundColor: "rgba(15, 23, 42, 0.95)", // move dark bg here for solid fallback
   },
   innerContainer: {
     flexDirection: "row",

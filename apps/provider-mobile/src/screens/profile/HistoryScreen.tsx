@@ -1,62 +1,81 @@
-import React from "react";
-import { View, Text, StyleSheet, FlatList } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, FlatList, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Header from "../../components/Header";
 import { COLORS } from "../../theme";
-
-const MOCK_HISTORY = [
-  {
-    id: "1",
-    date: "Today, 10:15 AM",
-    name: "Alice M.",
-    type: "Check-up",
-    fee: "$150",
-  },
-  {
-    id: "2",
-    date: "Today, 09:45 AM",
-    name: "John D.",
-    type: "Emergency",
-    fee: "$200",
-  },
-  { id: "3", date: "Yesterday", name: "Sarah W.", type: "Report", fee: "$100" },
-];
+import { api } from "../../services/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HistoryScreen({ navigation }: any) {
+  const [history, setHistory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const token = await AsyncStorage.getItem("access_token");
+        const res = await api.get("/provider/history", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.data?.history) {
+          setHistory(res.data.history);
+        }
+      } catch (err) {
+        if (__DEV__) console.error("Error fetching history:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchHistory();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <Header title="Session History" showBack />
 
-      <FlatList
-        data={MOCK_HISTORY}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 20 }}
-        renderItem={({ item }) => (
-          <View style={styles.item}>
-            <View style={styles.iconBox}>
-              <Ionicons
-                name="checkmark-done"
-                size={20}
-                color={COLORS.success}
-              />
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={history}
+          keyExtractor={(item, index) => item.id || index.toString()}
+          contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Ionicons name="calendar-outline" size={40} color="#CBD5E1" />
+              <Text style={styles.emptyText}>No sessions recorded today.</Text>
             </View>
-            <View style={{ flex: 1, paddingHorizontal: 12 }}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.date}>
-                {item.date} • {item.type}
-              </Text>
+          }
+          renderItem={({ item }) => (
+            <View style={styles.item}>
+              <View style={styles.iconBox}>
+                <Ionicons
+                  name="checkmark-done"
+                  size={20}
+                  color={COLORS.success}
+                />
+              </View>
+              <View style={{ flex: 1, paddingHorizontal: 12 }}>
+                <Text style={styles.name}>{item.patientName || item.name}</Text>
+                <Text style={styles.date}>
+                  {item.date || "Today"} • {item.type || "General"}
+                </Text>
+              </View>
+              <Text style={styles.fee}>✓</Text>
             </View>
-            <Text style={styles.fee}>{item.fee}</Text>
-          </View>
-        )}
-      />
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
   item: {
     flexDirection: "row",
     alignItems: "center",
@@ -76,4 +95,13 @@ const styles = StyleSheet.create({
   name: { fontWeight: "700", color: COLORS.text, fontSize: 15 },
   date: { color: COLORS.subText, fontSize: 12, marginTop: 2 },
   fee: { fontWeight: "700", color: COLORS.primary, fontSize: 15 },
+  empty: {
+    alignItems: "center",
+    marginTop: 60,
+  },
+  emptyText: {
+    color: "#64748B",
+    marginTop: 12,
+    fontSize: 15,
+  }
 });

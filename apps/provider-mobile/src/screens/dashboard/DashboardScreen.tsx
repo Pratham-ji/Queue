@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
   },
 
   // Scroll Content
-  scroll: { paddingHorizontal: 24, paddingBottom: 140, paddingTop: 10 },
+  scroll: { paddingHorizontal: 24, paddingBottom: 180, paddingTop: 10 },
 
   // Hero Card
   heroCardShadow: {
@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
   emptySub: { color: "#94A3B8", fontSize: 13, marginTop: 4 },
 
   // Floating Button
-  fabContainer: { position: "absolute", bottom: 32, left: 24, right: 24 },
+  fabContainer: { position: "absolute", bottom: 110, left: 24, right: 24 },
   primaryBtn: {
     height: 56,
     backgroundColor: "#0F172A",

@@ -47,7 +47,7 @@ export default function SlideToCall({ onTrigger, disabled }: { onTrigger: () => 
         style={[styles.knob, { transform: [{ translateX: pan.x }] }, disabled && styles.disabledKnob]}
         {...panResponder.panHandlers}
       >
-        <Ionicons name="arrow-forward" size={24} color={disabled ? "#94A3B8" : "#059669"} />
+        <Ionicons name="arrow-forward" size={24} color={disabled ? "#94A3B8" : "#2563EB"} />
       </Animated.View>
     </View>
   );

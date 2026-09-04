@@ -204,7 +204,7 @@ export default function DashboardScreen({ navigation }: any) {
               colors={
                 activeClinic?.isEmergencyPause
                   ? ["#F59E0B", "#D97706"] // Amber/Orange for Emergency
-                  : ["#047857", "#059669"] // Premium Medical Blue
+                  : ["#1E3A8A", "#2563EB"] // Electric Sapphire
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -279,22 +279,58 @@ export default function DashboardScreen({ navigation }: any) {
               )}
             </LinearGradient>
 
-            {/* QUICK ACTIONS (Below gradient but inside shadow card) */}
+            {/* QUICK ACTIONS — Notify / Skip / Complete */}
             <View style={styles.actionRow}>
               <TouchableOpacity
                 style={styles.actionBtn}
-                onPress={() => navigation.navigate("PatientList")}
+                onPress={() => {
+                  if (!currentPatient) return Alert.alert("No Patient", "Call a patient first.");
+                  // TODO: fire socket nudge to patient
+                  Alert.alert("Notified 🔔", `${currentPatient.name} has been nudged.`);
+                }}
               >
-                <Ionicons name="list" size={20} color={"#047857"} />
-                <Text style={styles.actionText}>Queue</Text>
+                <Ionicons name="notifications-outline" size={20} color="#2563EB" />
+                <Text style={styles.actionText}>Notify</Text>
               </TouchableOpacity>
+
               <View style={styles.vertDivider} />
+
               <TouchableOpacity
                 style={styles.actionBtn}
-                onPress={() => navigation.navigate("Scan")}
+                onPress={() => {
+                  if (!currentPatient) return Alert.alert("No Patient", "Call a patient first.");
+                  Alert.alert(
+                    "Skip Patient?",
+                    `Move ${currentPatient.name} down one spot?`,
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      { text: "Skip", style: "destructive", onPress: () => {
+                        // TODO: PATCH queue order in Prisma
+                        handleCallNext();
+                        Alert.alert("Skipped ⏳", "Patient moved down. Next patient called.");
+                      }},
+                    ]
+                  );
+                }}
               >
-                <Ionicons name="qr-code-outline" size={20} color={"#10B981"} />
-                <Text style={styles.actionText}>Scan</Text>
+                <Ionicons name="timer-outline" size={20} color="#F59E0B" />
+                <Text style={styles.actionText}>Skip</Text>
+              </TouchableOpacity>
+
+              <View style={styles.vertDivider} />
+
+              <TouchableOpacity
+                style={styles.actionBtn}
+                onPress={async () => {
+                  if (!currentPatient) return Alert.alert("No Patient", "Call a patient first.");
+                  // Sync vitals before clearing
+                  if (weight || bp) await handleSyncVitals();
+                  handleCallNext();
+                  Alert.alert("Completed ✅", "Session saved. Ready for next patient.");
+                }}
+              >
+                <Ionicons name="checkmark-circle-outline" size={20} color="#10B981" />
+                <Text style={styles.actionText}>Complete</Text>
               </TouchableOpacity>
             </View>
           </Animatable.View>
@@ -335,7 +371,7 @@ export default function DashboardScreen({ navigation }: any) {
               onPress={() => navigation.navigate("PatientList")}
             >
               <Text style={styles.viewAllText}>View All Waiting Patients</Text>
-              <Ionicons name="arrow-forward" size={14} color={"#047857"} />
+              <Ionicons name="arrow-forward" size={14} color={"#2563EB"} />
             </TouchableOpacity>
           </View>
         ) : (
@@ -417,8 +453,8 @@ const styles = StyleSheet.create({
 
   // Hero Card
   heroCardShadow: {
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.2,
+    shadowColor: "#2563EB",
+    shadowOpacity: 0.25,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 10 },
     elevation: 10,

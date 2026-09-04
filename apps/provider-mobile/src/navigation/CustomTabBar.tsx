@@ -135,8 +135,8 @@ const AnimatedTabIcon = ({ isFocused, onPress, label, iconName }: any) => {
       style={styles.tabButton}
     >
       <Animatable.View ref={viewRef} style={styles.tabContent} useNativeDriver>
-        <Ionicons name={iconName} size={22} color={isFocused ? "#38BDF8" : COLORS.muted} />
-        <Text style={[styles.tabLabel, { color: isFocused ? "#38BDF8" : COLORS.muted }]}>
+        <Ionicons name={iconName} size={22} color={isFocused ? "#60A5FA" : COLORS.muted} />
+        <Text style={[styles.tabLabel, { color: isFocused ? "#60A5FA" : COLORS.muted }]}>
           {label}
         </Text>
       </Animatable.View>

@@ -70,7 +70,7 @@ export default function LoginScreen({ navigation }: any) {
         await AsyncStorage.setItem("access_token", accessToken);
         await AsyncStorage.setItem("user_data", JSON.stringify(user));
 
-        navigation.replace("Dashboard");
+        navigation.replace("Main");
       }
     } catch (error: any) {
       const msg = error.response?.data?.error || `${activeTab === "login" ? "Login" : "Signup"} failed. Check your details.`;

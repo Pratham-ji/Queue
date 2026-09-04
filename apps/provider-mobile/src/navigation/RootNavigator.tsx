@@ -2,6 +2,7 @@ import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 // Import Screens
+import BottomTabs from "./BottomTabs";
 import LoginScreen from "../screens/auth/LoginScreen";
 import DashboardScreen from "../screens/dashboard/DashboardScreen";
 import PatientListScreen from "../screens/queue/PatientListScreen";
@@ -25,7 +26,7 @@ export default function RootNavigator() {
       screenOptions={{ headerShown: false, animation: "slide_from_right" }}
     >
       <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Dashboard" component={DashboardScreen} />
+      <Stack.Screen name="Main" component={BottomTabs} />
       <Stack.Screen name="PatientList" component={PatientListScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="ClinicProfile" component={ClinicProfileScreen} />

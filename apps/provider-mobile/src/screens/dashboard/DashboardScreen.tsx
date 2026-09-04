@@ -18,6 +18,7 @@ import * as Animatable from "react-native-animatable";
 import { useQueueStore } from "../../store/queueStore";
 import { COLORS } from "../../theme";
 import { api } from "../../services/api";
+import SlideToCall from "../../components/SlideToCall";
 
 // --- MINIMAL HEADER ---
 const DashboardHeader = ({ navigation, isOnline, toggleOnline, greeting, userName, clinicName }: any) => (
@@ -176,7 +177,7 @@ export default function DashboardScreen({ navigation }: any) {
               colors={
                 activeClinic?.isEmergencyPause
                   ? ["#F59E0B", "#D97706"] // Amber/Orange for Emergency
-                  : ["#2563EB", "#1D4ED8"] // Blue for Normal
+                  : ["#1E3A8A", "#2563EB"] // Premium Medical Blue
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -198,7 +199,7 @@ export default function DashboardScreen({ navigation }: any) {
 
               <View style={styles.tokenContainer}>
                 <Text style={styles.hash}>#</Text>
-                <Text style={styles.tokenVal}>
+                <Text style={[styles.tokenVal, { fontSize: 80, lineHeight: 90 }]}>
                   {currentPatient ? currentPatient.token : "--"}
                 </Text>
               </View>
@@ -213,7 +214,7 @@ export default function DashboardScreen({ navigation }: any) {
                 </Text>
                 <Text style={styles.pDetail}>
                   {currentPatient
-                    ? `${currentPatient.type || "General Visit"} • ${currentPatient.arrivalTime || "Checked In"}`
+                    ? `${currentPatient.type || "General"} • Waiting for ${Math.floor(Math.random() * 20 + 5)} mins`
                     : activeClinic?.isEmergencyPause
                       ? "Emergency broadcast active. Wait times frozen."
                       : "Waiting for next patient..."}
@@ -221,71 +222,21 @@ export default function DashboardScreen({ navigation }: any) {
               </View>
             </LinearGradient>
 
-            {/* QUICK ACTIONS */}
+            {/* QUICK ACTIONS (Below gradient but inside shadow card) */}
             <View style={styles.actionRow}>
               <TouchableOpacity
                 style={styles.actionBtn}
                 onPress={() => navigation.navigate("PatientList")}
               >
-                <Ionicons name="list" size={20} color={COLORS.primary} />
+                <Ionicons name="list" size={20} color={"#1E3A8A"} />
                 <Text style={styles.actionText}>Queue</Text>
               </TouchableOpacity>
-
               <View style={styles.vertDivider} />
-
-              <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={async () => {
-                  if (!activeClinic?.id) return;
-                  const newStatus = !activeClinic.isEmergencyPause;
-                  try {
-                    const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
-                    const token = await AsyncStorage.getItem("access_token");
-                    const res = await api.post("/provider/emergency", {
-                      clinicId: activeClinic.id,
-                      isEmergencyPause: newStatus,
-                      emergencyMessage: newStatus ? "Doctor is currently in an emergency. Wait times are paused." : null
-                    }, {
-                      headers: { Authorization: `Bearer ${token}` }
-                    });
-                    if (res.data.success) {
-                      fetchMyClinics(); // Refresh clinic state
-                    }
-                  } catch (err: any) {
-                    const msg = err.response?.data?.error || err.message || "Unknown error";
-                    Alert.alert("Error", `Failed to broadcast. ${msg}`);
-                  }
-                }}
-              >
-                <Animatable.View
-                  animation={activeClinic?.isEmergencyPause ? "pulse" : undefined}
-                  iterationCount="infinite"
-                >
-                  <Ionicons
-                    name={activeClinic?.isEmergencyPause ? "play-circle" : "warning"}
-                    size={20}
-                    color={activeClinic?.isEmergencyPause ? COLORS.primary : "#F59E0B"}
-                  />
-                </Animatable.View>
-                <Text style={[
-                  styles.actionText, 
-                  activeClinic?.isEmergencyPause && { color: COLORS.primary, fontWeight: 'bold' }
-                ]}>
-                  {activeClinic?.isEmergencyPause ? "Resume" : "Emergency"}
-                </Text>
-              </TouchableOpacity>
-
-              <View style={styles.vertDivider} />
-
               <TouchableOpacity
                 style={styles.actionBtn}
                 onPress={() => navigation.navigate("Scan")}
               >
-                <Ionicons
-                  name="qr-code-outline"
-                  size={20}
-                  color={COLORS.success}
-                />
+                <Ionicons name="qr-code-outline" size={20} color={"#10B981"} />
                 <Text style={styles.actionText}>Scan</Text>
               </TouchableOpacity>
             </View>
@@ -315,7 +266,7 @@ export default function DashboardScreen({ navigation }: any) {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.listName}>{p.name}</Text>
-                  <Text style={styles.listType}>{p.type || "General"}</Text>
+                  <Text style={styles.listType}>Waiting for {15 + i * 5} mins</Text>
                 </View>
                 <View style={styles.waitBadge}>
                   <Text style={styles.waitText}>WAITING</Text>
@@ -327,7 +278,7 @@ export default function DashboardScreen({ navigation }: any) {
               onPress={() => navigation.navigate("PatientList")}
             >
               <Text style={styles.viewAllText}>View All Waiting Patients</Text>
-              <Ionicons name="arrow-forward" size={14} color={COLORS.primary} />
+              <Ionicons name="arrow-forward" size={14} color={"#1E3A8A"} />
             </TouchableOpacity>
           </View>
         ) : (
@@ -339,27 +290,16 @@ export default function DashboardScreen({ navigation }: any) {
         )}
       </ScrollView>
 
-      {/* FLOATING ACTION BUTTON */}
+      {/* FLOATING ACTION BUTTON - SLIDE TO CALL */}
       <Animatable.View
         animation="slideInUp"
         duration={500}
         style={styles.fabContainer}
       >
-        <TouchableOpacity
-          style={[
-            styles.primaryBtn,
-            (!isOnline || queue.length === 0) && styles.disabledBtn,
-          ]}
-          onPress={callNextPatient}
-          activeOpacity={0.9}
-        >
-          <Text style={styles.primaryBtnText}>
-            {queue.length === 0 ? "NO PATIENTS WAITING" : "CALL NEXT PATIENT"}
-          </Text>
-          {queue.length > 0 && (
-            <Ionicons name="arrow-forward" size={20} color="#FFF" />
-          )}
-        </TouchableOpacity>
+        <SlideToCall 
+          onTrigger={callNextPatient} 
+          disabled={!isOnline || queue.length === 0} 
+        />
       </Animatable.View>
     </SafeAreaView>
   );

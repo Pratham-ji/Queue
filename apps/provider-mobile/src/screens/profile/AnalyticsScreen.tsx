@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -6,11 +7,13 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SHADOWS } from "../../theme";
+import { useQueueStore } from "../../store/queueStore";
 
 const { width } = Dimensions.get("window");
 
@@ -49,6 +52,14 @@ const StatCard = ({ icon, label, value, trend, trendUp }: any) => (
 );
 
 export default function AnalyticsScreen({ navigation }: any) {
+  const { analytics, fetchAnalytics, activeClinic } = useQueueStore();
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchAnalytics();
+    }, [])
+  );
+
   return (
     <View style={styles.container}>
       {/* 1. DARK HEADER WITH CHART */}
@@ -68,8 +79,10 @@ export default function AnalyticsScreen({ navigation }: any) {
           </View>
 
           <View style={styles.totalSection}>
-            <Text style={styles.totalLabel}>TOTAL REVENUE (THIS WEEK)</Text>
-            <Text style={styles.totalVal}>$2,450.00</Text>
+            <Text style={styles.totalLabel}>TOTAL PATIENTS SERVED</Text>
+            <Text style={styles.totalVal}>
+              {analytics ? analytics.totalPatients : <ActivityIndicator color="#fff" />}
+            </Text>
           </View>
 
           <View style={styles.chartArea}>
@@ -93,28 +106,28 @@ export default function AnalyticsScreen({ navigation }: any) {
           <StatCard
             icon="people"
             label="Total Patients"
-            value="142"
-            trend="12%"
-            trendUp={true}
+            value={analytics?.totalPatients || 0}
+            trend={analytics?.trend || "0%"}
+            trendUp={analytics?.trendUp ?? true}
           />
           <StatCard
             icon="time"
-            label="Avg Consult"
-            value="12m"
+            label="Avg Wait (min)"
+            value={analytics?.avgWaitTime || 0}
             trend="2%"
             trendUp={false}
           />
           <StatCard
-            icon="star"
-            label="Rating"
-            value="4.9"
-            trend="0.1"
+            icon="document-text"
+            label="Prescriptions"
+            value={analytics?.prescriptionsIssued || 0}
+            trend="5%"
             trendUp={true}
           />
           <StatCard
-            icon="wallet"
-            label="Avg Fee"
-            value="$150"
+            icon="star"
+            label="Rating"
+            value={activeClinic?.rating || "4.9"}
             trend="0%"
             trendUp={true}
           />
@@ -137,7 +150,7 @@ export default function AnalyticsScreen({ navigation }: any) {
 
         <View style={styles.insightCard}>
           <View style={styles.insightRow}>
-            <Ionicons name="thumbs-up" size={24} color={COLORS.success} />
+            <Ionicons name="thumbs-up" size={24} color="#10B981" />
             <View style={{ flex: 1 }}>
               <Text style={styles.insightTitle}>Positive Feedback</Text>
               <Text style={styles.insightText}>

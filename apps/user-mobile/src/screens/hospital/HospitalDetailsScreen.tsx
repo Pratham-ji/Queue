@@ -116,18 +116,14 @@ export default function HospitalDetailsScreen() {
 
           {/* Doctors Section */}
           <View style={styles.docHeader}>
-            <Text style={styles.sectionTitle}>Specialists</Text>
+            <Text style={styles.sectionTitle}>Available Specialists</Text>
             <Text style={styles.seeAll}>See All</Text>
           </View>
 
           {hospital.doctors.map((doc: any) => (
-            <TouchableOpacity
+            <View
               key={doc.id}
               style={styles.doctorCard}
-              activeOpacity={0.7}
-              onPress={() =>
-                navigation.navigate("Booking", { doctorId: doc.id })
-              }
             >
               <Image source={{ uri: doc.image }} style={styles.docImage} />
 
@@ -141,38 +137,17 @@ export default function HospitalDetailsScreen() {
                 </View>
               </View>
 
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                <TouchableOpacity 
-                  style={[styles.bookBtn, { backgroundColor: "#E2E8F0" }]}
-                  onPress={() => startChat(doc.id, doc)}
-                  disabled={startingChat === doc.id}
-                >
-                  {startingChat === doc.id ? (
-                    <ActivityIndicator size="small" color={COLORS.primary} />
-                  ) : (
-                    <Ionicons name="chatbubble" size={18} color={COLORS.primary} />
-                  )}
-                </TouchableOpacity>
-                <View style={styles.bookBtn}>
-                  <Text style={styles.bookBtnText}>Book</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.bookBtn}
+                onPress={() => navigation.navigate("Queue", { clinicId: id, clinicName: hospital.name, doctorId: doc.id })}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.bookBtnText}>Take My Spot</Text>
+              </TouchableOpacity>
+            </View>
           ))}
         </View>
       </ScrollView>
-
-      {/* Floating Join Queue Button */}
-      <View style={styles.floatingBtnContainer}>
-        <TouchableOpacity
-          style={styles.joinQueueBtn}
-          onPress={() => navigation.navigate("Queue", { clinicId: id, clinicName: hospital.name })}
-          activeOpacity={0.9}
-        >
-          <Ionicons name="people" size={20} color="#FFF" />
-          <Text style={styles.joinQueueText}>Join Queue</Text>
-        </TouchableOpacity>
-      </View>
 
       {/* Floating Back Button */}
       <TouchableOpacity
@@ -190,7 +165,7 @@ const styles = StyleSheet.create({
   loader: { flex: 1, justifyContent: "center", alignItems: "center" },
 
   // HERO
-  heroContainer: { height: 380, width: width, position: "relative" },
+  heroContainer: { height: 350, width: width, position: "relative" },
   heroImage: { width: "100%", height: "100%", resizeMode: "cover" },
   gradientOverlay: { ...StyleSheet.absoluteFillObject },
   heroContent: { position: "absolute", bottom: 30, left: 24, right: 24 },
@@ -199,7 +174,7 @@ const styles = StyleSheet.create({
   ratingBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -242,7 +217,7 @@ const styles = StyleSheet.create({
   // BODY
   body: {
     marginTop: -20,
-    backgroundColor: COLORS.bg,
+    backgroundColor: COLORS.surface,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     padding: 24,

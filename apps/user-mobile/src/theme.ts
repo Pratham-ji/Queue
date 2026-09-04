@@ -11,38 +11,39 @@ export const spacing = {
 };
 
 export const colors = {
-  background: "#FFFFFF",
+  background: "#F8FAFC",
   surface: "#FFFFFF",
-  textPrimary: "#111827",
-  textSecondary: "#9AA0A6",
-  textMuted: "#B9BEC4",
-  divider: "#EDEDED",
-  success: "#16A34A",
-  warning: "#D97706",
-  primary: "#111827",
-  pillBg: "#F3F4F6",
+  textPrimary: "#0F172A",
+  textSecondary: "#64748B",
+  textMuted: "#94A3B8",
+  divider: "#E2E8F0",
+  success: "#10B981",
+  warning: "#F59E0B",
+  error: "#EF4444",
+  primary: "#059669",
+  pillBg: "#F1F5F9",
 };
 
 export const shadows: { card: ViewStyle; soft: ViewStyle } = {
   card: {
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   soft: {
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
 };
 
 export const typography = {
-  heading: { fontSize: 28, fontWeight: "700" as TextStyle["fontWeight"] },
-  subheading: { fontSize: 20, fontWeight: "600" as TextStyle["fontWeight"] },
-  body: { fontSize: 16 },
+  heading: { fontSize: 28, fontWeight: "800" as TextStyle["fontWeight"], color: colors.textPrimary },
+  subheading: { fontSize: 20, fontWeight: "700" as TextStyle["fontWeight"], color: colors.textPrimary },
+  body: { fontSize: 16, color: colors.textPrimary },
   caption: { fontSize: 14, color: colors.textSecondary },
 };

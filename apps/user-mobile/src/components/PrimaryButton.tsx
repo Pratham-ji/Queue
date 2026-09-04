@@ -23,8 +23,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   text: {
-    color: "#FFFFFF",
     ...typography.body,
+    color: "#FFFFFF",
     fontWeight: "600",
   },
 });

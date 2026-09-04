@@ -9,19 +9,21 @@ import {
   StatusBar,
   TextInput,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Animatable from "react-native-animatable";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { api } from "../../services/api";
+import { useUserQueueStore } from "../../store/userQueueStore";
 
 // 🎨 THEME
 const COLORS = {
-  primary: "#10B981",
+  primary: "#059669",
   bg: "#F8FAFC",
   white: "#FFFFFF",
-  text: "#1E293B",
+  text: "#0F172A",
   subText: "#64748B",
   border: "#E2E8F0",
   read: "#F1F5F9",
@@ -64,6 +66,8 @@ export default function MessagesScreen() {
   const [threads, setThreads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [credits, setCredits] = useState(0);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const { activePrescription } = useUserQueueStore();
 
   const fetchThreads = async () => {
     try {
@@ -89,6 +93,12 @@ export default function MessagesScreen() {
     }, [])
   );
 
+  const handleNotificationTap = (item: typeof NOTIFICATIONS[0]) => {
+    if (item.title === "Prescription Ready") {
+      setShowOtpModal(true);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <StatusBar barStyle="dark-content" />
@@ -97,7 +107,7 @@ export default function MessagesScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Inbox</Text>
         <View style={styles.creditBadge}>
-          <Ionicons name="wallet" size={16} color="#FFF" />
+          <Ionicons name="wallet" size={16} color="#F8FAFC" />
           <Text style={styles.creditText}>{credits} Credits</Text>
         </View>
       </View>
@@ -186,7 +196,7 @@ export default function MessagesScreen() {
           contentContainerStyle={styles.listContent}
           renderItem={({ item, index }) => (
             <Animatable.View animation="fadeInUp" delay={index * 100}>
-              <View style={styles.notifCard}>
+              <TouchableOpacity style={styles.notifCard} onPress={() => handleNotificationTap(item)} activeOpacity={item.title === "Prescription Ready" ? 0.7 : 1}>
                 <View
                   style={[
                     styles.iconBox,
@@ -204,11 +214,41 @@ export default function MessagesScreen() {
                   <Text style={styles.notifBody}>{item.body}</Text>
                   <Text style={styles.notifTime}>{item.time}</Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             </Animatable.View>
           )}
         />
       )}
+
+      {/* OTP MODAL */}
+      <Modal visible={showOtpModal} transparent animationType="slide">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContainer}>
+            <TouchableOpacity 
+              style={styles.modalCloseBtn}
+              onPress={() => setShowOtpModal(false)}
+            >
+              <Ionicons name="close" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+            
+            <Ionicons name="medkit" size={48} color={COLORS.primary} style={{ alignSelf: 'center', marginBottom: 16 }} />
+            <Text style={styles.modalTitle}>Pharmacy Verification</Text>
+            <Text style={styles.modalDesc}>
+              Show this code to the pharmacist at the counter to collect your medicines.
+            </Text>
+
+            <View style={styles.otpBox}>
+              <Text style={styles.otpText}>
+                {activePrescription ? activePrescription.otpCode.split('').join(' ') : "4 8 2 9 0 1"}
+              </Text>
+            </View>
+            
+            <TouchableOpacity style={styles.modalDoneBtn} onPress={() => setShowOtpModal(false)}>
+              <Text style={styles.modalDoneText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -228,13 +268,13 @@ const styles = StyleSheet.create({
   creditBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.warning,
+    backgroundColor: COLORS.subText,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     gap: 6,
   },
-  creditText: { color: "#FFF", fontWeight: "700", fontSize: 13 },
+  creditText: { color: "#F8FAFC", fontWeight: "700", fontSize: 13 },
 
   // TABS
   tabContainer: {
@@ -356,4 +396,70 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   notifTime: { fontSize: 12, color: "#94A3B8", fontWeight: "500" },
+
+  // MODAL STYLES
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.6)",
+    justifyContent: "flex-end",
+  },
+  modalContainer: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 32,
+    paddingBottom: 40,
+    alignItems: "center",
+  },
+  modalCloseBtn: {
+    position: "absolute",
+    top: 24,
+    right: 24,
+    padding: 8,
+    backgroundColor: COLORS.read,
+    borderRadius: 20,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: COLORS.text,
+    marginBottom: 12,
+  },
+  modalDesc: {
+    fontSize: 15,
+    color: COLORS.subText,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  otpBox: {
+    backgroundColor: COLORS.read,
+    paddingHorizontal: 32,
+    paddingVertical: 20,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    borderStyle: "dashed",
+    marginBottom: 32,
+    width: "100%",
+  },
+  otpText: {
+    fontSize: 40,
+    fontWeight: "900",
+    letterSpacing: 8,
+    color: COLORS.primary,
+    textAlign: "center",
+  },
+  modalDoneBtn: {
+    backgroundColor: COLORS.text,
+    width: "100%",
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: "center",
+  },
+  modalDoneText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "700",
+  }
 });

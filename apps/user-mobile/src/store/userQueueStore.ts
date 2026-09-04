@@ -303,6 +303,5 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
     return () => subscription.remove();
   },
 
-  // 7. OFFLINE STATUS
-  setOfflineStatus: (status: boolean) => set({ isOffline: status }),
+  // 7. OFFLINE STATUS handled earlier
 }));

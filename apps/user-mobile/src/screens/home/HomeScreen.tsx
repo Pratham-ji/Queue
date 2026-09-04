@@ -8,34 +8,16 @@ import {
   Image,
   TouchableOpacity,
   StatusBar,
-  FlatList,
   ActivityIndicator,
   Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import { api } from "../../services/api";
-
-const { width } = Dimensions.get("window");
-const CARD_MARGIN = 16;
-const BENTO_PADDING = 20;
-const HALF_WIDTH = (width - BENTO_PADDING * 2 - CARD_MARGIN) / 2;
-
-const COLORS = {
-  primary: "#10B981", // Emerald 500
-  primaryDark: "#047857", // Emerald 700
-  bg: "#0F172A", // Slate 900 - Premium Dark Mode
-  surface: "#1E293B", // Slate 800
-  text: "#F8FAFC",
-  subText: "#94A3B8",
-  white: "#FFFFFF",
-  border: "#334155",
-};
-
 import NetInfo from "@react-native-community/netinfo";
 import { useUserQueueStore } from "../../store/userQueueStore";
+import { colors, shadows } from "../../theme";
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
@@ -44,7 +26,6 @@ export default function HomeScreen() {
   const { isOffline, setOfflineStatus } = useUserQueueStore();
 
   useEffect(() => {
-    // Network listener
     const unsubscribe = NetInfo.addEventListener(state => {
       setOfflineStatus(!state.isConnected);
     });
@@ -53,8 +34,7 @@ export default function HomeScreen() {
       try {
         const clinicRes = await api.get("/hospital/clinics");
         if (clinicRes.data.success) {
-          const fetched = clinicRes.data.data;
-          setClinics(fetched);
+          setClinics(clinicRes.data.data);
         }
       } catch (error) {
         console.error("Failed to load home data", error);
@@ -67,127 +47,67 @@ export default function HomeScreen() {
     return () => unsubscribe();
   }, []);
 
-  const handleQuickJoin = (clinicId: string, isEmergencyPause: boolean) => {
+  const handleClinicTap = (clinicId: string, clinicName: string) => {
     if (isOffline) {
       alert("You are offline. Reconnecting...");
       return;
     }
-    if (isEmergencyPause) {
-      alert("This clinic is currently on an emergency pause and cannot accept new patients.");
-      return;
-    }
-    // Pass the specific clinicId directly to the Queue Screen for instant joining
-    navigation.navigate("Queue", { clinicId });
+    navigation.navigate("HospitalDetails", { id: clinicId, clinicName });
   };
 
-  const handleClinicTap = (clinicId: string) => {
-    navigation.navigate("HospitalDetails", { id: clinicId });
-  };
+  const renderClinicCard = (clinic: any) => {
+    // Generate fake metrics for UI
+    const queueCount = clinic._count?.patients || Math.floor(Math.random() * 10);
+    const estWait = queueCount * 5;
+    const doctorsCount = clinic.doctors?.length || 2;
 
-  const renderHeroCard = (clinic: any) => {
-    if (!clinic) return null;
-    return (
-      <TouchableOpacity
-        activeOpacity={0.9}
-        style={styles.heroCard}
-        onPress={() => handleClinicTap(clinic.id)}
-      >
-        <Image source={{ uri: clinic.image || "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2753&auto=format&fit=crop" }} style={styles.heroImage} />
-        <LinearGradient
-          colors={clinic.isEmergencyPause ? ["rgba(239, 68, 68, 0.4)", "rgba(15, 23, 42, 0.95)"] : ["transparent", "rgba(15, 23, 42, 0.95)"]}
-          style={styles.heroGradient}
-        />
-        
-        <View style={styles.heroContent}>
-          <View style={styles.heroTopRow}>
-            {clinic.isEmergencyPause ? (
-              <View style={[styles.glassBadge, { backgroundColor: 'rgba(239, 68, 68, 0.9)' }]}>
-                <Ionicons name="warning" size={12} color="#FFF" />
-                <Text style={[styles.badgeText, { color: "#FFF", fontWeight: "700" }]}>EMERGENCY PAUSE</Text>
-              </View>
-            ) : (
-              <>
-                <View style={styles.glassBadge}>
-                  <Ionicons name="star" size={12} color="#FBBF24" />
-                  <Text style={styles.badgeText}>{clinic.rating || "4.9"}</Text>
-                </View>
-                <View style={[styles.glassBadge, { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
-                  <Ionicons name="flash" size={12} color={COLORS.primary} />
-                  <Text style={[styles.badgeText, { color: COLORS.primary }]}>Fast Track</Text>
-                </View>
-              </>
-            )}
-          </View>
-          
-          <Text style={styles.heroTitle} numberOfLines={1}>{clinic.name}</Text>
-          <Text style={styles.heroSub} numberOfLines={1}>
-            <Ionicons name="location" size={12} /> {clinic.address}, {clinic.city}
-          </Text>
-
-          {/* Doctor Avatars (Nested Doctors) */}
-          {clinic.doctors && clinic.doctors.length > 0 && (
-            <View style={styles.doctorsRow}>
-              {clinic.doctors.slice(0, 3).map((doc: any, i: number) => (
-                <Image key={doc.id} source={{ uri: doc.image }} style={[styles.doctorAvatar, { marginLeft: i > 0 ? -10 : 0 }]} />
-              ))}
-              {clinic.doctors.length > 3 && (
-                <View style={styles.doctorAvatarMore}>
-                  <Text style={styles.doctorAvatarMoreText}>+{clinic.doctors.length - 3}</Text>
-                </View>
-              )}
-            </View>
-          )}
-
-          <TouchableOpacity 
-            style={[styles.quickJoinBtn, clinic.isEmergencyPause && { opacity: 0.5 }]}
-            onPress={() => handleQuickJoin(clinic.id, clinic.isEmergencyPause)}
-            disabled={clinic.isEmergencyPause}
-          >
-            <LinearGradient
-              colors={clinic.isEmergencyPause ? ["#64748B", "#475569"] : [COLORS.primary, COLORS.primaryDark]}
-              start={{x:0, y:0}} end={{x:1, y:1}}
-              style={styles.quickJoinGradient}
-            >
-              <Text style={styles.quickJoinText}>{clinic.isEmergencyPause ? "PAUSED" : "Join Queue Now"}</Text>
-              <Ionicons name={clinic.isEmergencyPause ? "lock-closed" : "arrow-forward"} size={16} color="#FFF" />
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderSubCard = (clinic: any, index: number) => {
     return (
       <TouchableOpacity
         key={clinic.id}
         activeOpacity={0.9}
-        style={[
-          styles.subCard,
-          { marginRight: index % 2 === 0 ? CARD_MARGIN : 0 }
-        ]}
-        onPress={() => handleClinicTap(clinic.id)}
+        style={styles.clinicCard}
+        onPress={() => handleClinicTap(clinic.id, clinic.name)}
       >
-        <Image source={{ uri: clinic.image || "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2753&auto=format&fit=crop" }} style={styles.subImage} />
-        <LinearGradient
-          colors={["transparent", "rgba(15, 23, 42, 0.9)"]}
-          style={styles.subGradient}
+        <Image 
+          source={{ uri: clinic.image || "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2753&auto=format&fit=crop" }} 
+          style={styles.clinicImage} 
         />
-        <View style={styles.subContent}>
-          <View style={styles.glassBadgeSmall}>
-            <Ionicons name="star" size={10} color="#FBBF24" />
-            <Text style={styles.badgeTextSmall}>{clinic.rating || "4.8"}</Text>
+        
+        <View style={styles.clinicInfo}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.clinicName} numberOfLines={1}>{clinic.name}</Text>
+            <View style={styles.ratingBadge}>
+              <Text style={styles.ratingText}>{clinic.rating || "4.9"}</Text>
+              <Ionicons name="star" size={10} color="#FFF" />
+            </View>
           </View>
-          <Text style={styles.subTitle} numberOfLines={1}>{clinic.name}</Text>
-          <Text style={styles.subSub} numberOfLines={1}>{clinic.city}</Text>
           
-          <TouchableOpacity 
-            style={[styles.subQuickBtn, clinic.isEmergencyPause && { backgroundColor: "#475569" }]}
-            onPress={() => handleQuickJoin(clinic.id, clinic.isEmergencyPause)}
-            disabled={clinic.isEmergencyPause}
-          >
-            <Text style={styles.subQuickText}>{clinic.isEmergencyPause ? "PAUSED" : "Join"}</Text>
-          </TouchableOpacity>
+          <Text style={styles.clinicAddress} numberOfLines={1}>
+            {clinic.address}, {clinic.city}
+          </Text>
+
+          <View style={styles.badgeRow}>
+            {clinic.isEmergencyPause ? (
+              <View style={[styles.badge, { backgroundColor: "#FEF2F2", borderColor: "#FECACA" }]}>
+                <View style={[styles.dot, { backgroundColor: "#EF4444" }]} />
+                <Text style={[styles.badgeText, { color: "#B91C1C" }]}>Paused (Emergency)</Text>
+              </View>
+            ) : (
+              <View style={[styles.badge, { backgroundColor: "#ECFDF5", borderColor: "#A7F3D0" }]}>
+                <View style={[styles.dot, { backgroundColor: colors.success }]} />
+                <Text style={[styles.badgeText, { color: colors.primary }]}>Live ({queueCount} in queue)</Text>
+              </View>
+            )}
+            
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>⏱️ ~{estWait} mins</Text>
+            </View>
+          </View>
+
+          <View style={styles.footerRow}>
+            <Text style={styles.doctorCount}>👨‍⚕️ {doctorsCount} Doctors Available</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -195,15 +115,15 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: COLORS.bg, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.bg} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       {/* HEADER */}
       <View style={styles.header}>
@@ -217,13 +137,13 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* SEARCH BAR (Glassmorphic) */}
+      {/* SEARCH BAR */}
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color={COLORS.subText} />
+        <Ionicons name="search" size={20} color={colors.textMuted} />
         <TextInput
           placeholder="Search hospitals, doctors..."
           style={styles.searchInput}
-          placeholderTextColor={COLORS.subText}
+          placeholderTextColor={colors.textMuted}
         />
         <View style={styles.filterBtn}>
           <Ionicons name="options" size={20} color="#FFF" />
@@ -232,217 +152,152 @@ export default function HomeScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 16 }}
       >
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Featured Marketplace</Text>
+        <Text style={styles.sectionTitle}>Recommended Clinics</Text>
+
+        <View style={styles.listContainer}>
+          {clinics.length > 0 ? (
+            clinics.map((clinic) => renderClinicCard(clinic))
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="medical-outline" size={48} color={colors.divider} />
+              <Text style={styles.emptyText}>No clinics available yet.</Text>
+            </View>
+          )}
         </View>
-
-        {/* BENTO GRID LAYOUT */}
-        <View style={styles.bentoGrid}>
-          {clinics.length > 0 && renderHeroCard(clinics[0])}
-          
-          <View style={styles.subGrid}>
-            {clinics.slice(1).map((clinic, idx) => renderSubCard(clinic, idx))}
-          </View>
-        </View>
-
-        {/* EMPTY STATE HANDLING */}
-        {clinics.length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons name="medical-outline" size={48} color={COLORS.border} />
-            <Text style={styles.emptyText}>No clinics available yet.</Text>
-          </View>
-        )}
-
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: BENTO_PADDING,
+    paddingHorizontal: 16,
     paddingTop: 10,
     marginBottom: 20,
   },
-  greeting: { fontSize: 14, color: COLORS.subText, marginBottom: 4 },
-  title: { fontSize: 24, fontWeight: "800", color: COLORS.text, letterSpacing: -0.5 },
+  greeting: { fontSize: 14, color: colors.textSecondary, marginBottom: 4 },
+  title: { fontSize: 24, fontWeight: "800", color: colors.textPrimary, letterSpacing: -0.5 },
   userAvatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
     borderWidth: 2,
-    borderColor: COLORS.surface,
+    borderColor: colors.surface,
   },
-
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.surface,
-    marginHorizontal: BENTO_PADDING,
+    backgroundColor: colors.surface,
+    marginHorizontal: 16,
     paddingHorizontal: 16,
     height: 54,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.divider,
     marginBottom: 24,
+    ...shadows.soft,
   },
-  searchInput: { flex: 1, marginLeft: 10, fontSize: 16, color: COLORS.text },
+  searchInput: { flex: 1, marginLeft: 10, fontSize: 16, color: colors.textPrimary },
   filterBtn: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     width: 36,
     height: 36,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
-
-  sectionHeader: {
-    paddingHorizontal: BENTO_PADDING,
-    marginBottom: 16,
+  sectionTitle: { 
+    fontSize: 18, 
+    fontWeight: "700", 
+    color: colors.textPrimary, 
+    marginBottom: 16 
   },
-  sectionTitle: { fontSize: 18, fontWeight: "700", color: COLORS.text, letterSpacing: 0.5 },
-
-  bentoGrid: {
-    paddingHorizontal: BENTO_PADDING,
+  listContainer: {
+    gap: 16,
   },
   
-  // HERO CARD (SPAN 2)
-  heroCard: {
-    width: "100%",
-    height: 280,
-    borderRadius: 24,
+  // ZOMATO STYLE HORIZONTAL CARDS
+  clinicCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
     overflow: "hidden",
-    marginBottom: CARD_MARGIN,
-    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.divider,
+    ...shadows.card,
   },
-  heroImage: { width: "100%", height: "100%", position: "absolute" },
-  heroGradient: { position: "absolute", bottom: 0, left: 0, right: 0, height: "80%" },
-  heroContent: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 20,
+  clinicImage: {
+    width: "100%",
+    height: 140,
+    backgroundColor: colors.divider,
   },
-  heroTopRow: {
+  clinicInfo: {
+    padding: 16,
+  },
+  cardHeader: {
     flexDirection: "row",
-    gap: 8,
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  clinicName: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.textPrimary,
+    marginRight: 8,
+  },
+  ratingBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.success,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 2,
+  },
+  ratingText: { color: "#FFF", fontSize: 12, fontWeight: "700" },
+  clinicAddress: {
+    fontSize: 13,
+    color: colors.textSecondary,
     marginBottom: 12,
   },
-  glassBadge: {
+  badgeRow: {
     flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.15)",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  badgeText: { color: "#FFF", fontSize: 12, fontWeight: "700" },
-  heroTitle: { fontSize: 24, fontWeight: "800", color: "#FFF", marginBottom: 4 },
-  heroSub: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginBottom: 12 },
-  
-  doctorsRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    gap: 8,
     marginBottom: 16,
   },
-  doctorAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: COLORS.surface,
-  },
-  doctorAvatarMore: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: COLORS.surface,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: -10,
-  },
-  doctorAvatarMoreText: {
-    color: "#FFF",
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  
-  quickJoinBtn: {
-    width: "100%",
-    height: 48,
-    borderRadius: 14,
-    overflow: "hidden",
-  },
-  quickJoinGradient: {
-    flex: 1,
+  badge: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  quickJoinText: { color: "#FFF", fontWeight: "700", fontSize: 15 },
-
-  // SUB CARDS (SPAN 1)
-  subGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  subCard: {
-    width: HALF_WIDTH,
-    height: 200,
-    borderRadius: 20,
-    overflow: "hidden",
-    marginBottom: CARD_MARGIN,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  subImage: { width: "100%", height: "100%", position: "absolute" },
-  subGradient: { position: "absolute", bottom: 0, left: 0, right: 0, height: "70%" },
-  subContent: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 12,
-  },
-  glassBadgeSmall: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
-    alignSelf: "flex-start",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    backgroundColor: colors.pillBg,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 8,
-    gap: 2,
-    marginBottom: 8,
-  },
-  badgeTextSmall: { color: "#FFF", fontSize: 10, fontWeight: "700" },
-  subTitle: { fontSize: 15, fontWeight: "700", color: "#FFF", marginBottom: 2 },
-  subSub: { fontSize: 11, color: "rgba(255,255,255,0.6)", marginBottom: 12 },
-  
-  subQuickBtn: {
-    backgroundColor: "rgba(255,255,255,0.15)",
-    paddingVertical: 8,
-    borderRadius: 10,
-    alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: colors.divider,
+    gap: 4,
   },
-  subQuickText: { color: "#FFF", fontWeight: "600", fontSize: 13 },
-
+  dot: { width: 6, height: 6, borderRadius: 3 },
+  badgeText: { fontSize: 12, fontWeight: "600", color: colors.textSecondary },
+  footerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+  },
+  doctorCount: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
   emptyState: {
     paddingTop: 60,
     alignItems: "center",
@@ -450,7 +305,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     marginTop: 16,
-    color: COLORS.subText,
+    color: colors.textSecondary,
     fontSize: 16,
   }
 });

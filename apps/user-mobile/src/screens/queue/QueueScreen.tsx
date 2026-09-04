@@ -145,10 +145,14 @@ export default function QueueScreen({ route }: any) {
                currentServingToken ? `Serving Token #${currentServingToken}` : "Clinic is Live"}
             </Text>
           </View>
-          {__DEV__ && activeClinicId && (
-            <Text style={{ textAlign: "center", color: "red", fontSize: 10, marginTop: 4 }}>Clinic ID: {activeClinicId}</Text>
-          )}
         </View>
+
+        {isEmergencyPause && queueStatus === "JOINED" && (
+          <Animatable.View animation="pulse" easing="ease-out" iterationCount="infinite" style={styles.emergencyBanner}>
+            <Ionicons name="warning" size={20} color="#92400E" />
+            <Text style={styles.emergencyText}>Doctor stepped out for an emergency. Your spot is secured.</Text>
+          </Animatable.View>
+        )}
 
         {activePrescription ? (
           // 💊 PRESCRIPTION READY (PHARMACY HANDOFF)
@@ -179,13 +183,20 @@ export default function QueueScreen({ route }: any) {
         ) : queueStatus === "JOINED" ? (
           // 🎫 ZOMATO-STYLE ORDER TRACKER
           <Animatable.View animation="fadeInUp" duration={500} style={styles.trackerContainer}>
+            
             <View style={styles.ticketHeader}>
-              <Text style={styles.ticketLabel}>YOUR TOKEN</Text>
-              <Text style={styles.bigToken}>#{activeToken}</Text>
+              <Text style={styles.ticketLabel}>YOUR POSITION</Text>
+              <Animatable.Text 
+                animation="pulse" 
+                iterationCount="infinite" 
+                direction="alternate" 
+                style={styles.bigToken}
+              >
+                #{peopleAhead + 1}
+              </Animatable.Text>
               <View style={styles.statsBadgeRow}>
                 <View style={styles.glassBadge}>
-                  <Ionicons name="people" size={14} color="#FFF" />
-                  <Text style={styles.badgeText}>{peopleAhead} Ahead</Text>
+                  <Text style={styles.badgeText}>Now Serving: #{currentServingToken}</Text>
                 </View>
                 <View style={[styles.glassBadge, { backgroundColor: "rgba(16, 185, 129, 0.2)" }]}>
                   <Ionicons name="time" size={14} color={COLORS.primary} />
@@ -201,25 +212,25 @@ export default function QueueScreen({ route }: any) {
                   <Ionicons name="checkmark" size={16} color="#FFF" />
                 </View>
                 <View style={styles.stepContent}>
-                  <Text style={styles.stepTitle}>In Queue</Text>
+                  <Text style={styles.stepTitle}>Joined Queue</Text>
                   <Text style={styles.stepDesc}>You are currently waiting.</Text>
                 </View>
               </View>
               <View style={[styles.timelineLine, { backgroundColor: peopleAhead <= 1 ? COLORS.primary : COLORS.border }]} />
 
-              {/* STEP 2: Next Up */}
+              {/* STEP 2: Waiting Area */}
               <View style={styles.timelineStep}>
                 <View style={[styles.stepCircle, { backgroundColor: peopleAhead <= 1 ? COLORS.primary : COLORS.border }]}>
                   {peopleAhead <= 1 && <Ionicons name="checkmark" size={16} color="#FFF" />}
                 </View>
                 <View style={styles.stepContent}>
-                  <Text style={[styles.stepTitle, { color: peopleAhead <= 1 ? COLORS.text : COLORS.subText }]}>Next Up</Text>
-                  <Text style={styles.stepDesc}>{peopleAhead <= 1 ? "Get ready, you're position 2!" : "Waiting for your turn..."}</Text>
+                  <Text style={[styles.stepTitle, { color: peopleAhead <= 1 ? COLORS.text : COLORS.subText }]}>In Waiting Area</Text>
+                  <Text style={styles.stepDesc}>{peopleAhead <= 1 ? "Get ready, you're next!" : "Waiting for your turn..."}</Text>
                 </View>
               </View>
               <View style={[styles.timelineLine, { backgroundColor: peopleAhead === 0 ? COLORS.primary : COLORS.border }]} />
 
-              {/* STEP 3: Now Serving */}
+              {/* STEP 3: Doctor's Desk */}
               <View style={styles.timelineStep}>
                 <View 
                   style={[
@@ -230,18 +241,8 @@ export default function QueueScreen({ route }: any) {
                   {peopleAhead === 0 && <Ionicons name="checkmark" size={16} color="#FFF" />}
                 </View>
                 <View style={styles.stepContent}>
-                  <Text style={[styles.stepTitle, { color: peopleAhead === 0 ? COLORS.text : COLORS.subText }]}>Now Serving</Text>
+                  <Text style={[styles.stepTitle, { color: peopleAhead === 0 ? COLORS.text : COLORS.subText }]}>Doctor's Desk</Text>
                   <Text style={styles.stepDesc}>{peopleAhead === 0 ? "Please head into the doctor's room." : ""}</Text>
-                </View>
-              </View>
-              <View style={[styles.timelineLine, { backgroundColor: COLORS.border }]} />
-
-              {/* STEP 4: Completed */}
-              <View style={styles.timelineStep}>
-                <View style={[styles.stepCircle, { backgroundColor: COLORS.border }]} />
-                <View style={styles.stepContent}>
-                  <Text style={[styles.stepTitle, { color: COLORS.subText }]}>Completed</Text>
-                  <Text style={styles.stepDesc}></Text>
                 </View>
               </View>
             </View>
@@ -258,7 +259,7 @@ export default function QueueScreen({ route }: any) {
             style={styles.formCard}
           >
             <Text style={styles.formTitle}>Check In</Text>
-            <Text style={styles.formSub}>Join the queue from your phone.</Text>
+            <Text style={styles.formSub}>Join the {clinicName} queue instantly.</Text>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Patient Name</Text>
@@ -279,7 +280,7 @@ export default function QueueScreen({ route }: any) {
               {isLoading ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <Text style={styles.joinText}>Get Ticket</Text>
+                <Text style={styles.joinText}>Take My Spot</Text>
               )}
             </TouchableOpacity>
           </Animatable.View>
@@ -370,6 +371,23 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 12, fontWeight: "600", color: COLORS.dark },
 
   // TRACKER UI (Zomato-Style)
+  emergencyBanner: {
+    backgroundColor: "#FEF3C7",
+    padding: 12,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#FCD34D",
+  },
+  emergencyText: {
+    color: "#92400E",
+    fontWeight: "600",
+    fontSize: 13,
+    flex: 1,
+  },
   trackerContainer: {
     backgroundColor: COLORS.white,
     borderRadius: 24,

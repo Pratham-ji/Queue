@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api } from "../../services/api";
+import { useUserQueueStore } from "../../store/userQueueStore";
 import * as Animatable from "react-native-animatable";
 
 const COLORS = {
@@ -80,6 +81,11 @@ export default function BookingScreen() {
         // Save to storage
         await AsyncStorage.setItem("user_token", res.data.data.token.toString());
         await AsyncStorage.setItem("user_clinic_id", doctor.clinicId);
+        
+        useUserQueueStore.getState().setClinic(doctor.clinicId);
+        useUserQueueStore.setState({ activeToken: res.data.data.token, queueStatus: "JOINED" });
+        useUserQueueStore.getState().initializeSocket();
+        useUserQueueStore.getState().refreshData();
         
         Alert.alert("Success! 🎉", "Your appointment has been booked.", [
           { text: "OK", onPress: () => navigation.replace("LiveTracking", { clinicId: doctor.clinicId, doctorId: doctor.id }) },

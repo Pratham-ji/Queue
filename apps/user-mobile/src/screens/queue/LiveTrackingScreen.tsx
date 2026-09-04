@@ -34,6 +34,7 @@ export default function LiveTrackingScreen() {
     activeToken,
     activeClinicId,
     joinQueue,
+    setClinic,
     leaveQueue,
     peopleAhead,
     estimatedWait,
@@ -45,6 +46,13 @@ export default function LiveTrackingScreen() {
 
   const [name, setName] = useState("");
   const clinicName = route?.params?.clinicName || "General Department";
+  const routeClinicId = route?.params?.clinicId;
+
+  useEffect(() => {
+    if (routeClinicId && routeClinicId !== activeClinicId) {
+      setClinic(routeClinicId);
+    }
+  }, [routeClinicId]);
 
   if (queueStatus !== "JOINED") {
     return (

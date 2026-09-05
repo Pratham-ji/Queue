@@ -15,6 +15,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { api } from "../../services/api";
+import { io } from "socket.io-client";
+const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || "http://13.201.230.245:5001";
 import NetInfo from "@react-native-community/netinfo";
 import { useUserQueueStore } from "../../store/userQueueStore";
 import { colors, shadows } from "../../theme";
@@ -44,7 +46,19 @@ export default function HomeScreen() {
     };
     fetchData();
 
-    return () => unsubscribe();
+    // Listen for live updates
+    const socket = io(SOCKET_URL);
+    // Since we want live updates for all clinics on the home screen, 
+    // ideally the backend would broadcast to a global 'marketplace' room. 
+    // We'll listen to a generic 'clinics_updated' event here and re-fetch.
+    socket.on("clinics_updated", () => {
+      fetchData();
+    });
+
+    return () => {
+      unsubscribe();
+      socket.disconnect();
+    };
   }, []);
 
   const handleClinicTap = (clinicId: string, clinicName: string) => {

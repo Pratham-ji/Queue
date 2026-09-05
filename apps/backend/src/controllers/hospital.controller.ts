@@ -5,7 +5,7 @@ import { prisma } from "../utils/prisma";
 export const getClinics = async (req: Request, res: Response) => {
   try {
     const clinics = await prisma.clinic.findMany({
-      include: { doctors: true },
+      include: { doctors: true, _count: { select: { patients: { where: { status: "WAITING" } } } } },
     });
     res.json({ success: true, data: clinics });
   } catch (error) {

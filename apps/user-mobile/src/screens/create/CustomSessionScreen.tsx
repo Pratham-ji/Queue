@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import * as Animatable from "react-native-animatable";
 import { io } from "socket.io-client";
 import { api } from "../../services/api";
 
@@ -35,10 +36,8 @@ export default function CustomSessionScreen() {
     });
 
     // 3. Listen for Status Updates (The Magic ✨)
-    socket.on("queue_updated", (updatedPerson) => {
-      setQueue((prevQueue) =>
-        prevQueue.map((p) => (p.id === updatedPerson.id ? updatedPerson : p)),
-      );
+    socket.on("custom_queue_updated", (fullQueue) => {
+      setQueue(fullQueue);
     });
 
     // 4. Initial Sync
@@ -126,52 +125,68 @@ export default function CustomSessionScreen() {
           <FlatList
             data={queue}
             keyExtractor={(i) => i.id}
-            renderItem={({ item }) => (
-              <View
-                style={[
-                  styles.row,
-                  item.status === "SERVING" && styles.activeRow,
-                ]}
-              >
-                <View
+                        renderItem={({ item }) => {
+              const isServing = item.status === "SERVING";
+              const isCompleted = item.status === "COMPLETED";
+              const isWaiting = item.status === "WAITING";
+              
+              const Wrapper = isServing ? Animatable.View : View;
+              
+              return (
+                <Wrapper
+                  animation={isServing ? "pulse" : undefined}
+                  iterationCount={isServing ? "infinite" : undefined}
+                  duration={2000}
                   style={[
-                    styles.tokenCircle,
-                    item.status === "SERVING" && styles.activeToken,
+                    styles.row,
+                    isServing && { borderWidth: 2, borderColor: "#10B981", backgroundColor: "#ECFDF5" },
+                    isCompleted && { opacity: 0.5 },
                   ]}
                 >
-                  <Text
+                  <View
                     style={[
-                      styles.tokenNum,
-                      item.status === "SERVING" && { color: "#FFF" },
+                      styles.tokenCircle,
+                      isServing && styles.activeToken,
+                      isCompleted && { backgroundColor: "#E2E8F0" }
                     ]}
                   >
-                    {item.token}
-                  </Text>
-                </View>
-                <Text style={styles.name}>{item.name}</Text>
+                    <Text
+                      style={[
+                        styles.tokenNum,
+                        isServing && { color: "#FFF" },
+                      ]}
+                    >
+                      {item.token}
+                    </Text>
+                  </View>
+                  <Text style={[
+                    styles.name,
+                    isCompleted && { textDecorationLine: "line-through", color: "#94A3B8" }
+                  ]}>{item.name}</Text>
 
-                {/* STATUS BADGE */}
-                <View
-                  style={[
-                    styles.statusPill,
-                    item.status === "SERVING"
-                      ? { backgroundColor: "#DCFCE7" }
-                      : { backgroundColor: "#F1F5F9" },
-                  ]}
-                >
-                  <Text
+                  {/* STATUS BADGE */}
+                  <View
                     style={[
-                      styles.statusText,
-                      item.status === "SERVING"
-                        ? { color: "#166534" }
-                        : { color: "#64748B" },
+                      styles.statusPill,
+                      isServing && { backgroundColor: "#10B981" },
+                      isWaiting && { backgroundColor: "#F1F5F9" },
+                      isCompleted && { backgroundColor: "#E2E8F0" },
                     ]}
                   >
-                    {item.status}
-                  </Text>
-                </View>
-              </View>
-            )}
+                    <Text
+                      style={[
+                        styles.statusText,
+                        isServing && { color: "#FFFFFF" },
+                        isWaiting && { color: "#64748B" },
+                        isCompleted && { color: "#94A3B8" },
+                      ]}
+                    >
+                      {isServing ? "NOW SERVING" : isCompleted ? "DONE" : "WAITING"}
+                    </Text>
+                  </View>
+                </Wrapper>
+              );
+            }}
           />
         )}
       </View>

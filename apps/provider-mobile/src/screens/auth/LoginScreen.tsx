@@ -369,6 +369,7 @@ const styles = StyleSheet.create({
     shadowColor: COLORS.primary,
     shadowOpacity: 0,
     shadowRadius: 0,
+    elevation: 2,
   },
   inputWrapperFocus: {
     borderColor: COLORS.inputFocus,

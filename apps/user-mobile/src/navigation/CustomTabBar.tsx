@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
     shadowRadius: 20,
-    elevation: 10,
+    elevation: 20,
     overflow: "hidden", // Ensures blur doesn't bleed outside border radius on iOS
   },
   blurContainer: {

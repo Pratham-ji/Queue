@@ -16,5 +16,6 @@ router.post(
 // 2. Add Doctor to Clinic
 router.post("/add-doctor", requireAuth, requireRole(["PROVIDER", "ADMIN"]), addDoctor);
 
-export default router;
 router.get("/history", requireAuth, getHistory);
+
+export default router;

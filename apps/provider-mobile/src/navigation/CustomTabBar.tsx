@@ -4,8 +4,10 @@ import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import * as Animatable from "react-native-animatable";
+import { useQueueStore } from "../store/queueStore";
 
 const { width } = Dimensions.get("window");
+
 const COLORS = {
   primary: "#2563EB", // Royal Blue
   danger: "#EF4444",
@@ -14,10 +16,8 @@ const COLORS = {
   muted: "#64748B",
 };
 
-import { useQueueStore } from "../store/queueStore";
-
 export default function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  const { activeClinic, fetchMyClinics } = useQueueStore();
+  const { activeClinic } = useQueueStore();
   const isPaused = activeClinic?.isEmergencyPause || false;
 
   return (
@@ -46,7 +46,6 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
               }
             };
 
-            
             // Premium Action Button (Far Right)
             if (route.name === "Emergency") {
               const handleEmergency = () => {
@@ -54,11 +53,9 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
                 
                 const performPause = async (reason: string) => {
                   try {
-                    // Optimistic update
                     useQueueStore.setState({
                       activeClinic: { ...activeClinic, isEmergencyPause: true }
                     });
-                    
                     const { api } = require("../../services/api");
                     await api.post(`/queue/${activeClinic.id}/toggle-pause`, {
                       isPaused: true,
@@ -66,7 +63,6 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
                     });
                   } catch (err) {
                     alert("Failed to toggle queue state");
-                    // Revert on error
                     useQueueStore.setState({
                       activeClinic: { ...activeClinic, isEmergencyPause: false }
                     });
@@ -75,16 +71,13 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
 
                 const performResume = async () => {
                   try {
-                    // Optimistic UI for 0ms latency
                     useQueueStore.setState({
                       activeClinic: { ...activeClinic, isEmergencyPause: false }
                     });
-                    
                     const { api } = require("../../services/api");
                     await api.post(`/queue/${activeClinic.id}/resume`, {});
                   } catch (err) {
                     alert("Failed to resume queue");
-                    // Revert on error
                     useQueueStore.setState({
                       activeClinic: { ...activeClinic, isEmergencyPause: true }
                     });
@@ -93,55 +86,36 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
 
                 const { ActionSheetIOS, Platform, Alert } = require("react-native");
 
-                if (isPaused) {
-                  if (Platform.OS === "ios") {
-                    ActionSheetIOS.showActionSheetWithOptions(
-                      {
-                        options: ["Cancel", "▶️ End Break / Resume Queue"],
-                        cancelButtonIndex: 0,
-                        title: "Clinic Paused",
-                        message: "Ready to take patients again?",
-                        destructiveButtonIndex: 1, // On iOS, destructive makes it red, but we want Royal Blue/Emerald. ActionSheetIOS doesn't easily support custom colors for standard buttons besides red via destructive. We'll use default.
-                      },
-                      (buttonIndex: number) => {
-                        if (buttonIndex === 1) performResume();
-                      }
-                    );
-                  } else {
-                    Alert.alert(
-                      "Clinic Paused",
-                      "Ready to take patients again?",
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        { text: "▶️ End Break / Resume Queue", onPress: () => performResume() },
-                      ]
-                    );
-                  }
+                if (Platform.OS === "ios") {
+                  ActionSheetIOS.showActionSheetWithOptions(
+                    {
+                      options: [
+                        "Cancel",
+                        "🚨 Emergency (Pause Queue)",
+                        "☕ Doctor on Break",
+                        "▶️ End Break / Resume Queue"
+                      ],
+                      cancelButtonIndex: 0,
+                      title: "Queue Management",
+                      message: "Select an action for the queue",
+                    },
+                    (buttonIndex: number) => {
+                      if (buttonIndex === 1) performPause("EMERGENCY");
+                      if (buttonIndex === 2) performPause("BREAK");
+                      if (buttonIndex === 3) performResume();
+                    }
+                  );
                 } else {
-                  if (Platform.OS === "ios") {
-                    ActionSheetIOS.showActionSheetWithOptions(
-                      {
-                        options: ["Cancel", "🚨 Emergency (Pause Queue)", "☕ Doctor on Break"],
-                        cancelButtonIndex: 0,
-                        title: "Pause Queue",
-                        message: "Select a reason for pausing the queue",
-                      },
-                      (buttonIndex: number) => {
-                        if (buttonIndex === 1) performPause("EMERGENCY");
-                        if (buttonIndex === 2) performPause("BREAK");
-                      }
-                    );
-                  } else {
-                    Alert.alert(
-                      "Pause Queue",
-                      "Select a reason for pausing the queue",
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        { text: "🚨 Emergency (Pause Queue)", onPress: () => performPause("EMERGENCY") },
-                        { text: "☕ Doctor on Break", onPress: () => performPause("BREAK") },
-                      ]
-                    );
-                  }
+                  Alert.alert(
+                    "Queue Management",
+                    "Select an action for the queue",
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      { text: "🚨 Emergency (Pause Queue)", onPress: () => performPause("EMERGENCY") },
+                      { text: "☕ Doctor on Break", onPress: () => performPause("BREAK") },
+                      { text: "▶️ End Break / Resume Queue", onPress: () => performResume() },
+                    ]
+                  );
                 }
               };
 
@@ -156,7 +130,6 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
                 </TouchableOpacity>
               );
             }
-
 
             // Normal Tabs
             const getIconName = () => {

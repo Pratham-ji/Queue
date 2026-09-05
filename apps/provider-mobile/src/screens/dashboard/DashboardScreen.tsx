@@ -357,7 +357,7 @@ export default function DashboardScreen({ navigation }: any) {
 
         {queue.length > 0 ? (
           <View style={styles.listContainer}>
-            {queue.slice(0, 3).map((p, i) => (
+            {queue.slice(0, 2).map((p, i) => (
               <View
                 key={p.id}
                 style={[
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
   },
 
   // Scroll Content
-  scroll: { paddingHorizontal: 24, paddingBottom: 160, paddingTop: 10 },
+  scroll: { paddingHorizontal: 24, paddingBottom: 180, paddingTop: 10 },
 
   // Hero Card
   heroCardShadow: {

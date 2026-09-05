@@ -170,6 +170,11 @@ app.set("io", io);
 // START SERVER
 // ───────────────────────────────────────────────
 
+// Global 404 Fallback - Prevent HTML crashes on undefined routes
+app.use('*', (req, res) => {
+  res.status(404).json({ success: false, message: 'API route not found' });
+});
+
 const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => {
   console.log(`

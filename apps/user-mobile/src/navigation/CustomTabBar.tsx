@@ -7,69 +7,83 @@ import * as Animatable from "react-native-animatable";
 
 const { width } = Dimensions.get("window");
 
-export default function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+export default function CustomTabBar(props: BottomTabBarProps) {
+  const { state, descriptors, navigation } = props;
   return (
     <View style={styles.container}>
-      <BlurView intensity={80} tint="light" style={styles.blurContainer}>
-        <View style={styles.innerContainer}>
-          {state.routes.map((route, index) => {
-            const { options } = descriptors[route.key];
-            const label = options.tabBarLabel !== undefined
-              ? options.tabBarLabel
-              : options.title !== undefined
-              ? options.title
-              : route.name;
-
-            const isFocused = state.index === index;
-
-            const onPress = () => {
-              const event = navigation.emit({
-                type: 'tabPress',
-                target: route.key,
-                canPreventDefault: true,
-              });
-
-              if (!isFocused && !event.defaultPrevented) {
-                navigation.navigate(route.name);
-              }
-            };
-
-            // Zomato style Premium Action Button
-            if (route.name === "Create") {
-              return (
-                <TouchableOpacity
-                  key={index}
-                  activeOpacity={0.8}
-                  onPress={onPress}
-                  style={styles.premiumButton}
-                >
-                  <Text style={styles.premiumText}>Host</Text>
-                  <Ionicons name="arrow-forward" size={14} color="#FFF" />
-                </TouchableOpacity>
-              );
-            }
-
-            // Normal Tabs
-            const getIconName = () => {
-              if (route.name === "Home") return isFocused ? "search" : "search-outline";
-              if (route.name === "Queue") return isFocused ? "clipboard" : "clipboard-outline";
-              if (route.name === "Messages") return isFocused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline";
-              if (route.name === "Profile") return isFocused ? "person-circle" : "person-circle-outline";
-              return "ellipse";
-            };
-
-            return (
-              <AnimatedTabIcon
-                key={index}
-                isFocused={isFocused}
-                onPress={onPress}
-                label={label as string}
-                iconName={getIconName()}
-              />
-            );
-          })}
+      {/* iOS gets the blur; Android gets a solid opaque fallback */}
+      {Platform.OS === "ios" ? (
+        <BlurView intensity={80} tint="light" style={styles.innerPill}>
+          <TabBarContent {...props} />
+        </BlurView>
+      ) : (
+        <View style={styles.innerPill}>
+          <TabBarContent {...props} />
         </View>
-      </BlurView>
+      )}
+    </View>
+  );
+}
+
+function TabBarContent({ state, descriptors, navigation }: BottomTabBarProps) {
+  return (
+    <View style={styles.innerContainer}>
+      {state.routes.map((route, index) => {
+        const { options } = descriptors[route.key];
+        const label = options.tabBarLabel !== undefined
+          ? options.tabBarLabel
+          : options.title !== undefined
+          ? options.title
+          : route.name;
+
+        const isFocused = state.index === index;
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        };
+
+        // Premium Action Button
+        if (route.name === "Create") {
+          return (
+            <TouchableOpacity
+              key={index}
+              activeOpacity={0.8}
+              onPress={onPress}
+              style={styles.premiumButton}
+            >
+              <Text style={styles.premiumText}>Host</Text>
+              <Ionicons name="arrow-forward" size={14} color="#FFF" />
+            </TouchableOpacity>
+          );
+        }
+
+        // Normal Tabs
+        const getIconName = () => {
+          if (route.name === "Home") return isFocused ? "search" : "search-outline";
+          if (route.name === "Queue") return isFocused ? "clipboard" : "clipboard-outline";
+          if (route.name === "Messages") return isFocused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline";
+          if (route.name === "Profile") return isFocused ? "person-circle" : "person-circle-outline";
+          return "ellipse";
+        };
+
+        return (
+          <AnimatedTabIcon
+            key={index}
+            isFocused={isFocused}
+            onPress={onPress}
+            label={label as string}
+            iconName={getIconName()}
+          />
+        );
+      })}
     </View>
   );
 }
@@ -111,25 +125,30 @@ const styles = StyleSheet.create({
   container: {
     position: "absolute",
     bottom: 25,
-    alignSelf: "center",
-    width: "90%",
+    left: 20,
+    right: 20,
+    zIndex: 100,
+    // NO overflow: 'hidden' here — it kills Android elevation
     borderRadius: 40,
-    backgroundColor: "rgba(255, 255, 255, 0.95)", // Fallback if blur fails visually
+    // Android shadow (this IS the z-ordering mechanism)
+    elevation: 20,
+    // iOS shadow
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
     shadowRadius: 20,
-    elevation: 20,
-    overflow: "hidden", // Ensures blur doesn't bleed outside border radius on iOS
   },
-  blurContainer: {
+  innerPill: {
+    borderRadius: 40,
+    overflow: "hidden", // Clip blur/content to pill shape INSIDE the elevated wrapper
+    backgroundColor: Platform.OS === "android" ? "rgba(255, 255, 255, 0.97)" : "transparent",
     paddingHorizontal: 16,
-    paddingVertical: 12, // slightly larger to look like a pill
+    paddingVertical: 12,
   },
   innerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between", // Space them evenly
+    justifyContent: "space-between",
   },
   tabButton: {
     flex: 1,

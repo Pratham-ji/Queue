@@ -10,7 +10,7 @@ export const jwtConfig = {
     if (!process.env.JWT_REFRESH_SECRET) console.warn("⚠️ JWT_REFRESH_SECRET is missing from .env! Using fallback.");
     return process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || "fallback_refresh_secret_queue_2026"; 
   },
-  accessTokenExpiry: "15m" as SignOptions["expiresIn"],
+  accessTokenExpiry: "30d" as SignOptions["expiresIn"],
   refreshTokenExpiry: "7d" as SignOptions["expiresIn"],
 };
 

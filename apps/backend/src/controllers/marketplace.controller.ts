@@ -206,19 +206,16 @@ export const toggleEmergency = async (req: AuthRequest, res: Response) => {
 
     const clinic = await prisma.clinic.update({
       where: { id: clinicId },
-      data: {
-        isEmergencyPause,
-        emergencyMessage: isEmergencyPause ? emergencyMessage || "Emergency" : null,
-      },
+      data: { isEmergencyPause, emergencyMessage },
     });
 
-    // Broadcast event
     const io = req.app.get("io");
     if (io) {
-      io.emit(`clinic_emergency_${clinicId}`, {
-        isEmergencyPause,
-        emergencyMessage: clinic.emergencyMessage,
-      });
+      if (isEmergencyPause) {
+         io.to(clinicId).emit("queue_paused", { reason: "EMERGENCY" });
+      } else {
+         io.to(clinicId).emit("queue_resumed");
+      }
     }
 
     res.json({ success: true, data: clinic });
@@ -248,6 +245,21 @@ export const toggleOnlineStatus = async (req: AuthRequest, res: Response) => {
       where: { id: clinicId },
       data: { isOnline },
     });
+
+    if (isOnline) {
+      await prisma.patient.updateMany({
+        where: {
+          clinicId,
+          status: { in: ["WAITING", "SERVING"] },
+        },
+        data: { status: "MISSED" },
+      });
+      
+      const io = req.app.get("io");
+      if (io) {
+        io.to(clinicId).emit("queue_update", []);
+      }
+    }
 
     const io = req.app.get("io");
     if (io) {

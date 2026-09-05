@@ -111,3 +111,34 @@ export const addDoctor = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ success: false, error: "Failed to add doctor" });
   }
 };
+
+export const getHistory = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const primaryMembership = await prisma.clinicMember.findFirst({
+      where: { userId, isPrimary: true },
+    });
+
+    if (!primaryMembership) {
+      return res.status(404).json({ success: false, message: "No active clinic found" });
+    }
+
+    const history = await prisma.patient.findMany({
+      where: { 
+        clinicId: primaryMembership.clinicId,
+        status: { in: ["COMPLETED", "MISSED"] }
+      },
+      orderBy: { completedTime: "desc" },
+      take: 50,
+    });
+
+    // Frontend expects { history: [...] } or { success: true, history: [...] } or { data: { history: [...] } }
+    // The frontend code expects: res.data?.history
+    res.json({ success: true, history });
+  } catch (error) {
+    console.error("getHistory error:", error);
+    res.status(500).json({ success: false, message: "Server Error", history: [] });
+  }
+};

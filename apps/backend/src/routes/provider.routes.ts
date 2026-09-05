@@ -1,5 +1,5 @@
 import express from "express";
-import { registerClinic, addDoctor } from "../controllers/provider.controller";
+import { registerClinic, addDoctor, getHistory } from "../controllers/provider.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { requireRole } from "../middleware/role.middleware";
 
@@ -17,3 +17,4 @@ router.post(
 router.post("/add-doctor", requireAuth, requireRole(["PROVIDER", "ADMIN"]), addDoctor);
 
 export default router;
+router.get("/history", requireAuth, getHistory);

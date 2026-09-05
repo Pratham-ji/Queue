@@ -22,7 +22,7 @@ export default function SlideToCall({ onTrigger, disabled }: { onTrigger: () => 
       },
       onPanResponderRelease: (_, gestureState) => {
         if (disabled) return;
-        if (gestureState.dx > MAX_TRANSLATE - 20) {
+        if (gestureState.dx > MAX_TRANSLATE * 0.6) {
           if (!triggered) {
             setTriggered(true);
             onTrigger();

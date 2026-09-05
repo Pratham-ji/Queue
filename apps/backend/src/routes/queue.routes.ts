@@ -12,6 +12,7 @@ import {
   completePatient,
   skipPatient,
   togglePause,
+  resumeQueue,
 } from "../controllers/queue.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { requireRole } from "../middleware/role.middleware";
@@ -56,4 +57,6 @@ router.post("/:clinicId/complete", completePatient);
 router.post("/:clinicId/skip", skipPatient);
 // 6. Pause
 router.post("/:clinicId/toggle-pause", togglePause);
+// 7. Resume
+router.post("/:clinicId/resume", resumeQueue);
 export default router;

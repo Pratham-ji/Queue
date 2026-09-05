@@ -148,9 +148,16 @@ export const addPatient = async (req: Request, res: Response) => {
 
     // Generate Token (transaction to prevent duplicate tokens)
     const newPatient = await prisma.$transaction(async (tx) => {
+      
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
       const todayCount = await tx.patient.count({
-        where: { clinicId: clinic.id },
+        where: { 
+          clinicId: clinic.id,
+          arrivalTime: { gte: startOfDay }
+        },
       });
+
       const token = todayCount + 1;
 
       return tx.patient.create({
@@ -207,9 +214,16 @@ export const joinQueue = async (req: AuthRequest, res: Response) => {
 
     // Generate token (transaction for safety)
     const newPatient = await prisma.$transaction(async (tx) => {
+      
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
       const todayCount = await tx.patient.count({
-        where: { clinicId },
+        where: { 
+          clinicId,
+          arrivalTime: { gte: startOfDay }
+        },
       });
+
       const token = todayCount + 1;
 
       return tx.patient.create({
@@ -459,5 +473,26 @@ export const togglePause = async (req: Request, res: Response) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: "Toggle pause failed" });
+  }
+};
+
+export const resumeQueue = async (req: Request, res: Response) => {
+  try {
+    const clinicId = req.params.clinicId as string;
+
+    await prisma.clinic.update({
+      where: { id: clinicId },
+      data: { isEmergencyPause: false, emergencyMessage: null },
+    });
+
+    const io = req.app.get("io");
+    if (io) {
+      io.to(clinicId).emit("queue_resumed");
+    }
+
+    res.json({ success: true, message: "Queue resumed successfully" });
+  } catch (error) {
+    console.error("Resume Queue Error:", error);
+    res.status(500).json({ success: false, error: "Server Error" });
   }
 };

@@ -171,7 +171,7 @@ app.set("io", io);
 // ───────────────────────────────────────────────
 
 // Global 404 Fallback - Prevent HTML crashes on undefined routes
-app.use('*', (req, res) => {
+app.use((req: express.Request, res: express.Response) => {
   res.status(404).json({ success: false, message: 'API route not found' });
 });
 

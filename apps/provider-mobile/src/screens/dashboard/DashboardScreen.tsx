@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
   },
 
   // Scroll Content
-  scroll: { paddingHorizontal: 24, paddingBottom: 120, paddingTop: 10 },
+  scroll: { paddingHorizontal: 24, paddingBottom: 160, paddingTop: 10 },
 
   // Hero Card
   heroCardShadow: {

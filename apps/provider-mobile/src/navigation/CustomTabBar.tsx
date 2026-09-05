@@ -46,6 +46,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
               }
             };
 
+            
             // Premium Action Button (Far Right)
             if (route.name === "Emergency") {
               const handleEmergency = () => {
@@ -74,26 +75,49 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
 
                 const performResume = async () => {
                   try {
+                    // Optimistic UI for 0ms latency
                     useQueueStore.setState({
                       activeClinic: { ...activeClinic, isEmergencyPause: false }
                     });
                     
                     const { api } = require("../../services/api");
-                    await api.post(`/queue/${activeClinic.id}/toggle-pause`, {
-                      isPaused: false
-                    });
+                    await api.post(`/queue/${activeClinic.id}/resume`, {});
                   } catch (err) {
                     alert("Failed to resume queue");
+                    // Revert on error
                     useQueueStore.setState({
                       activeClinic: { ...activeClinic, isEmergencyPause: true }
                     });
                   }
                 };
 
+                const { ActionSheetIOS, Platform, Alert } = require("react-native");
+
                 if (isPaused) {
-                  performResume();
+                  if (Platform.OS === "ios") {
+                    ActionSheetIOS.showActionSheetWithOptions(
+                      {
+                        options: ["Cancel", "▶️ End Break / Resume Queue"],
+                        cancelButtonIndex: 0,
+                        title: "Clinic Paused",
+                        message: "Ready to take patients again?",
+                        destructiveButtonIndex: 1, // On iOS, destructive makes it red, but we want Royal Blue/Emerald. ActionSheetIOS doesn't easily support custom colors for standard buttons besides red via destructive. We'll use default.
+                      },
+                      (buttonIndex: number) => {
+                        if (buttonIndex === 1) performResume();
+                      }
+                    );
+                  } else {
+                    Alert.alert(
+                      "Clinic Paused",
+                      "Ready to take patients again?",
+                      [
+                        { text: "Cancel", style: "cancel" },
+                        { text: "▶️ End Break / Resume Queue", onPress: () => performResume() },
+                      ]
+                    );
+                  }
                 } else {
-                  const { ActionSheetIOS, Platform, Alert } = require("react-native");
                   if (Platform.OS === "ios") {
                     ActionSheetIOS.showActionSheetWithOptions(
                       {
@@ -132,6 +156,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
                 </TouchableOpacity>
               );
             }
+
 
             // Normal Tabs
             const getIconName = () => {

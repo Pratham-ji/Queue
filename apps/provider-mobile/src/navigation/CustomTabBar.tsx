@@ -61,7 +61,8 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
                       isPaused: true,
                       reason
                     });
-                  } catch (err) {
+                  } catch (err: any) {
+                    console.error("Pause API Error:", err?.response?.data || err.message);
                     alert("Failed to toggle queue state");
                     useQueueStore.setState({
                       activeClinic: { ...activeClinic, isEmergencyPause: false }
@@ -75,8 +76,12 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
                       activeClinic: { ...activeClinic, isEmergencyPause: false }
                     });
                     const { api } = require("../../services/api");
-                    await api.post(`/queue/${activeClinic.id}/resume`, {});
-                  } catch (err) {
+                    await api.post(`/queue/${activeClinic.id}/toggle-pause`, {
+                      isPaused: false,
+                      reason: null
+                    });
+                  } catch (err: any) {
+                    console.error("Resume API Error:", err?.response?.data || err.message);
                     alert("Failed to resume queue");
                     useQueueStore.setState({
                       activeClinic: { ...activeClinic, isEmergencyPause: true }

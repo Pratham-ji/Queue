@@ -56,7 +56,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
                     useQueueStore.setState({
                       activeClinic: { ...activeClinic, isEmergencyPause: true }
                     });
-                    const { api } = require("../../services/api");
+                    const { api } = require("../services/api");
                     await api.post(`/queue/${activeClinic.id}/toggle-pause`, {
                       isPaused: true,
                       reason
@@ -75,7 +75,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
                     useQueueStore.setState({
                       activeClinic: { ...activeClinic, isEmergencyPause: false }
                     });
-                    const { api } = require("../../services/api");
+                    const { api } = require("../services/api");
                     await api.post(`/queue/${activeClinic.id}/toggle-pause`, {
                       isPaused: false,
                       reason: null

@@ -347,6 +347,20 @@ export default function DashboardScreen({ navigation }: any) {
           </Animatable.View>
         </TouchableOpacity>
 
+                {/* INLINE ACTION BUTTON - SLIDE TO CALL */}
+        {queue.length > 0 && (
+          <Animatable.View
+            animation="fadeInUp"
+            duration={500}
+            style={[styles.fabContainer, { marginTop: 24, marginBottom: 32 }]}
+          >
+            <SlideToCall 
+              onTrigger={handleCallNext} 
+              disabled={!isOnline} 
+            />
+          </Animatable.View>
+        )}
+        
         {/* UP NEXT LIST */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>UP NEXT</Text>
@@ -393,19 +407,7 @@ export default function DashboardScreen({ navigation }: any) {
           </View>
         )}
 
-        {/* INLINE ACTION BUTTON - SLIDE TO CALL */}
-        {queue.length > 0 && (
-          <Animatable.View
-            animation="fadeInUp"
-            duration={500}
-            style={styles.fabContainer}
-          >
-            <SlideToCall 
-              onTrigger={handleCallNext} 
-              disabled={!isOnline} 
-            />
-          </Animatable.View>
-        )}
+
       </ScrollView>
     </SafeAreaView>
   );

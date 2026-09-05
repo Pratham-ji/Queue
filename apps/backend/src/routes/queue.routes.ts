@@ -1,8 +1,10 @@
 // apps/backend/src/routes/queue.routes.ts
 
-import { Router } from "express";
+import {
+  Router } from "express";
 import {
   getQueue,
+  demoReset,
   callNextPatient,
   addPatient,
   joinQueue,
@@ -59,4 +61,6 @@ router.post("/:clinicId/skip", skipPatient);
 router.post("/:clinicId/toggle-pause", togglePause);
 // 7. Resume
 router.post("/:clinicId/resume", resumeQueue);
+router.post("/demo-reset", demoReset);
+
 export default router;

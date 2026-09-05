@@ -151,20 +151,20 @@ export const addPatient = async (req: Request, res: Response) => {
       
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
-      const todayCount = await tx.patient.count({
+      const todaysCount = await tx.patient.count({
         where: { 
           clinicId: clinic.id,
           arrivalTime: { gte: startOfDay }
         },
       });
 
-      const token = todayCount + 1;
+      const tokenNumber = todaysCount + 1;
 
       return tx.patient.create({
         data: {
           name,
           phone: phone || "",
-          token,
+          token: tokenNumber,
           status: "WAITING",
           clinicId: clinic.id,
           expoPushToken: expoPushToken || null,
@@ -217,20 +217,20 @@ export const joinQueue = async (req: AuthRequest, res: Response) => {
       
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
-      const todayCount = await tx.patient.count({
+      const todaysCount = await tx.patient.count({
         where: { 
           clinicId,
           arrivalTime: { gte: startOfDay }
         },
       });
 
-      const token = todayCount + 1;
+      const tokenNumber = todaysCount + 1;
 
       return tx.patient.create({
         data: {
           name,
           phone: phone || "",
-          token,
+          token: tokenNumber,
           status: "WAITING",
           clinicId,
           expoPushToken: expoPushToken || null,
@@ -493,6 +493,30 @@ export const resumeQueue = async (req: Request, res: Response) => {
     res.json({ success: true, message: "Queue resumed successfully" });
   } catch (error) {
     console.error("Resume Queue Error:", error);
+    res.status(500).json({ success: false, error: "Server Error" });
+  }
+};
+
+// ==========================================
+// DEMO RESET (Wipe all patients for a clinic)
+// ==========================================
+export const demoReset = async (req: Request, res: Response) => {
+  try {
+    const { clinicId } = req.body;
+    if (!clinicId) return res.status(400).json({ error: "clinicId required" });
+
+    await prisma.patient.deleteMany({
+      where: { clinicId }
+    });
+
+    const io = req.app.get("io");
+    if (io) {
+      io.to(clinicId).emit("queue_update", []);
+      io.to(clinicId).emit("current_patient", null);
+    }
+
+    res.json({ success: true, message: "Demo data purged successfully" });
+  } catch (error) {
     res.status(500).json({ success: false, error: "Server Error" });
   }
 };

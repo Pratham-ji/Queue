@@ -1,14 +1,22 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  Animated,
-  PanResponder,
   Dimensions,
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  interpolate,
+  Extrapolate,
+  runOnJS,
+} from "react-native-reanimated";
+import { GestureDetector, Gesture } from "react-native-gesture-handler";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -18,65 +26,63 @@ interface SlideToCallProps {
 }
 
 export default function SlideToCall({ onTrigger, disabled }: SlideToCallProps) {
-  const SLIDER_WIDTH = Math.min(SCREEN_WIDTH - 48, 340);
+  // Respecting the grid alignment constraints
+  const SLIDER_WIDTH = SCREEN_WIDTH - 48; // To match exact dimensions (marginHorizontal: 24 on both sides = 48)
   const THUMB_SIZE = 56;
   const TRACK_PADDING = 4;
-  const MAX_TRANSLATE = SLIDER_WIDTH - THUMB_SIZE - TRACK_PADDING * 2;
+  const MAX_TRANSLATE = SLIDER_WIDTH - THUMB_SIZE - (TRACK_PADDING * 2);
+  const THRESHOLD = MAX_TRANSLATE * 0.75;
 
-  const pan = useRef(new Animated.Value(0)).current;
+  const translateX = useSharedValue(0);
+  const startX = useSharedValue(0);
   const [triggered, setTriggered] = useState(false);
 
-  // Interpolate text opacity — fades out as thumb slides right
-  const textOpacity = pan.interpolate({
-    inputRange: [0, MAX_TRANSLATE * 0.4],
-    outputRange: [1, 0],
-    extrapolate: "clamp",
+  const handleTriggerComplete = () => {
+    setTriggered(true);
+    onTrigger();
+    
+    // Reset state after slight delay
+    setTimeout(() => {
+      translateX.value = withSpring(0, { damping: 15, stiffness: 150 });
+      setTriggered(false);
+    }, 800);
+  };
+
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      startX.value = translateX.value;
+    })
+    .onUpdate((event) => {
+      if (disabled || triggered) return;
+      const translation = Math.max(0, Math.min(startX.value + event.translationX, MAX_TRANSLATE));
+      translateX.value = translation;
+    })
+    .onEnd(() => {
+      if (disabled || triggered) return;
+      if (translateX.value > THRESHOLD) {
+        translateX.value = withTiming(MAX_TRANSLATE, { duration: 150 }, () => {
+          runOnJS(handleTriggerComplete)();
+        });
+      } else {
+        translateX.value = withSpring(0, { damping: 15, stiffness: 150 });
+      }
+    });
+
+  const animatedThumbStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: translateX.value }],
+    };
   });
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => !disabled && !triggered,
-      onMoveShouldSetPanResponder: () => !disabled && !triggered,
-      onPanResponderMove: (_, gesture) => {
-        if (disabled || triggered) return;
-        const clamped = Math.max(0, Math.min(gesture.dx, MAX_TRANSLATE));
-        pan.setValue(clamped);
-      },
-      onPanResponderRelease: (_, gesture) => {
-        if (disabled || triggered) return;
-
-        if (gesture.dx > MAX_TRANSLATE * 0.6) {
-          // Snap to end, trigger, then spring back
-          Animated.timing(pan, {
-            toValue: MAX_TRANSLATE,
-            duration: 150,
-            useNativeDriver: true,
-          }).start(() => {
-            setTriggered(true);
-            onTrigger();
-
-            // Spring back after a brief pause
-            setTimeout(() => {
-              Animated.spring(pan, {
-                toValue: 0,
-                tension: 60,
-                friction: 10,
-                useNativeDriver: true,
-              }).start(() => setTriggered(false));
-            }, 800);
-          });
-        } else {
-          // Didn't reach threshold — spring back
-          Animated.spring(pan, {
-            toValue: 0,
-            tension: 80,
-            friction: 10,
-            useNativeDriver: true,
-          }).start();
-        }
-      },
-    })
-  ).current;
+  const animatedTextStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      translateX.value,
+      [0, MAX_TRANSLATE * 0.4],
+      [1, 0],
+      Extrapolate.CLAMP
+    );
+    return { opacity: disabled ? 1 : opacity };
+  });
 
   return (
     <View
@@ -86,32 +92,31 @@ export default function SlideToCall({ onTrigger, disabled }: SlideToCallProps) {
         disabled && styles.trackDisabled,
       ]}
     >
-      {/* Centered instruction text */}
       <Animated.Text
         style={[
           styles.label,
-          { opacity: disabled ? 1 : textOpacity },
+          animatedTextStyle,
           disabled && styles.labelDisabled,
         ]}
       >
         {disabled ? "NO PATIENTS WAITING" : "SLIDE TO CALL NEXT"}
       </Animated.Text>
 
-      {/* Draggable thumb */}
-      <Animated.View
-        style={[
-          styles.thumb,
-          { transform: [{ translateX: pan }] },
-          disabled && styles.thumbDisabled,
-        ]}
-        {...panResponder.panHandlers}
-      >
-        <Ionicons
-          name="arrow-forward"
-          size={22}
-          color={disabled ? "#94A3B8" : "#2563EB"}
-        />
-      </Animated.View>
+      <GestureDetector gesture={panGesture}>
+        <Animated.View
+          style={[
+            styles.thumb,
+            animatedThumbStyle,
+            disabled && styles.thumbDisabled,
+          ]}
+        >
+          <Ionicons
+            name="arrow-forward"
+            size={22}
+            color={disabled ? "#94A3B8" : "#2563EB"}
+          />
+        </Animated.View>
+      </GestureDetector>
     </View>
   );
 }
@@ -119,8 +124,8 @@ export default function SlideToCall({ onTrigger, disabled }: SlideToCallProps) {
 const styles = StyleSheet.create({
   track: {
     height: 64,
-    borderRadius: 32,
-    backgroundColor: "#0F172A",
+    borderRadius: 999,
+    backgroundColor: "#0F172A", // Rich slate
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.08)",
     justifyContent: "center",
@@ -144,10 +149,10 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: "100%",
     textAlign: "center",
-    color: "rgba(148, 163, 184, 0.9)",
+    color: "rgba(255,255,255,0.7)",
     fontWeight: "800",
     fontSize: 13,
-    letterSpacing: 2,
+    letterSpacing: 1.5,
   },
   labelDisabled: {
     color: "#94A3B8",
@@ -160,13 +165,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    // iOS shadow
+    // New drop shadow requirement
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    // Android shadow
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
     zIndex: 10,
   },
   thumbDisabled: {

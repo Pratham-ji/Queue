@@ -352,7 +352,7 @@ export default function DashboardScreen({ navigation }: any) {
           <Animatable.View
             animation="fadeInUp"
             duration={500}
-            style={[styles.fabContainer, { marginTop: 24, marginBottom: 32 }]}
+            style={[styles.fabContainer, { marginTop: 16, marginBottom: 32 }]}
           >
             <SlideToCall 
               onTrigger={handleCallNext} 
@@ -677,7 +677,7 @@ const styles = StyleSheet.create({
   emptySub: { color: "#94A3B8", fontSize: 13, marginTop: 4 },
 
   // Inline Button Container
-  fabContainer: { marginTop: 24, marginBottom: 16 },
+  fabContainer: { marginHorizontal: 24 },
   primaryBtn: {
     height: 56,
     backgroundColor: "#0F172A",

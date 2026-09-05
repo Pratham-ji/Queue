@@ -14,6 +14,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import * as Animatable from "react-native-animatable";
 import { useUserQueueStore } from "../../store/userQueueStore";
+import { api } from "../../services/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const COLORS = {
   primary: "#059669",
@@ -45,6 +47,7 @@ export default function LiveTrackingScreen() {
   } = useUserQueueStore();
 
   const [name, setName] = useState("");
+  const [localIsLoading, setLocalIsLoading] = useState(false);
   const clinicName = route?.params?.clinicName || "General Department";
   const routeClinicId = route?.params?.clinicId;
 
@@ -53,6 +56,45 @@ export default function LiveTrackingScreen() {
       setClinic(routeClinicId);
     }
   }, [routeClinicId]);
+
+  
+  const handleTakeMySpot = async () => {
+    if (!name.trim()) return Alert.alert("Required", "Please enter your name");
+    
+    setLocalIsLoading(true);
+    try {
+      // Direct API call as requested
+      const payload = { clinicId: routeClinicId || activeClinicId, patientName: name };
+      console.log('JOIN QUEUE PAYLOAD:', payload);
+      
+      // We hit the public add endpoint because /join requires auth
+      const res = await api.post(`/queue/${payload.clinicId}/add`, { 
+        name: payload.patientName, 
+        phone: "0000000000" 
+      });
+
+      if (res.data.success) {
+        const token = res.data.data.token;
+        // Hydrate store so the UI flips instantly
+        useUserQueueStore.setState({ 
+          activeToken: token, 
+          queueStatus: "JOINED",
+          activeClinicId: payload.clinicId 
+        });
+        await AsyncStorage.setItem("user_token", token.toString());
+        await AsyncStorage.setItem("user_clinic_id", payload.clinicId);
+        
+        // Initialize socket for live tracking
+        useUserQueueStore.getState().initializeSocket();
+        useUserQueueStore.getState().refreshData();
+      }
+    } catch (error: any) {
+      console.error("Direct Join Failed:", error);
+      Alert.alert("Error Joining", error?.response?.data?.error || error?.response?.data?.message || error.message);
+    } finally {
+      setLocalIsLoading(false);
+    }
+  };
 
   if (queueStatus !== "JOINED") {
     return (
@@ -80,10 +122,10 @@ export default function LiveTrackingScreen() {
 
             <TouchableOpacity
               style={[styles.joinBtn, !name.trim() && styles.disabledBtn]}
-              onPress={() => joinQueue(name, "0000000000")}
-              disabled={!name.trim() || isLoading}
+              onPress={handleTakeMySpot}
+              disabled={!name.trim() || localIsLoading}
             >
-              {isLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.joinText}>Take My Spot</Text>}
+              {localIsLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.joinText}>Take My Spot</Text>}
             </TouchableOpacity>
           </Animatable.View>
         </View>

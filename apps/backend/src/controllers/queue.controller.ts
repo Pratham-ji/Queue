@@ -173,6 +173,7 @@ export const addPatient = async (req: Request, res: Response) => {
     });
 
     io.to(clinic.id).emit("queue_update", updatedQueue);
+    io.to(clinic.id).emit("queue_updated", updatedQueue);
 
     res.status(201).json({ success: true, data: newPatient });
   } catch (error: any) {
@@ -231,6 +232,7 @@ export const joinQueue = async (req: AuthRequest, res: Response) => {
     });
 
     io.to(clinicId).emit("queue_update", updatedQueue);
+    io.to(clinicId).emit("queue_updated", updatedQueue);
 
     res.status(201).json({ success: true, data: newPatient });
   } catch (error) {

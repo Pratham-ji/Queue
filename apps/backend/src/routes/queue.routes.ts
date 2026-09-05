@@ -1,9 +1,8 @@
 // apps/backend/src/routes/queue.routes.ts
 
+import { Router } from "express";
 import {
   getActivePatientStatus,
-  Router } from "express";
-import {
   getQueue,
   demoReset,
   callNextPatient,

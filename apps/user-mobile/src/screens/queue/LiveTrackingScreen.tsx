@@ -106,7 +106,7 @@ export default function LiveTrackingScreen() {
     }
   };
 
-  if (queueStatus !== "JOINED") {
+  if (queueStatus === "IDLE") {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -143,6 +143,31 @@ export default function LiveTrackingScreen() {
     );
   }
 
+  if (queueStatus === "COMPLETED") {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 24 }}>
+          <Animatable.View animation="bounceIn" style={{ alignItems: "center", backgroundColor: "#ECFDF5", padding: 32, borderRadius: 24 }}>
+            <Ionicons name="checkmark-circle" size={80} color="#10B981" />
+            <Text style={{ fontSize: 24, fontWeight: "800", color: "#065F46", marginTop: 16, textAlign: "center" }}>Consultation Complete</Text>
+            <Text style={{ fontSize: 16, color: "#047857", marginTop: 8, textAlign: "center", lineHeight: 24 }}>
+              Your session has ended. Thank you for visiting {clinicName}!
+            </Text>
+            <TouchableOpacity 
+              style={{ marginTop: 32, paddingVertical: 14, paddingHorizontal: 24, borderRadius: 12, backgroundColor: "#059669" }}
+              onPress={() => {
+                useUserQueueStore.setState({ queueStatus: "IDLE", activeToken: null });
+                navigation.navigate("Home");
+              }}
+            >
+              <Text style={{ color: "#FFF", fontSize: 16, fontWeight: "700" }}>Return to Home</Text>
+            </TouchableOpacity>
+          </Animatable.View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   // Live Tracker State
   return (
     <SafeAreaView style={styles.container}>
@@ -152,9 +177,11 @@ export default function LiveTrackingScreen() {
           <Text style={styles.hospitalName}>{clinicName}</Text>
           
           {isEmergencyPause ? (
-            <View style={[styles.waitPill, { backgroundColor: "#FEF2F2" }]}>
-              <Ionicons name="warning" size={14} color="#EF4444" style={{ marginRight: 6 }} />
-              <Text style={[styles.waitText, { color: "#B91C1C" }]}>{emergencyMessage === "EMERGENCY" ? "Emergency Pause" : "Doctor on Break"}</Text>
+            <View style={[styles.waitPill, emergencyMessage === "EMERGENCY" ? { backgroundColor: "#FEF2F2" } : { backgroundColor: "#FEF3C7" }]}>
+              <Ionicons name="warning" size={14} color={emergencyMessage === "EMERGENCY" ? "#EF4444" : "#F59E0B"} style={{ marginRight: 6 }} />
+              <Text style={[styles.waitText, emergencyMessage === "EMERGENCY" ? { color: "#B91C1C" } : { color: "#92400E" }]}>
+                {emergencyMessage === "EMERGENCY" ? "Paused (Emergency)" : "Paused (Doctor on Break)"}
+              </Text>
             </View>
           ) : (
             <View style={styles.waitPill}>

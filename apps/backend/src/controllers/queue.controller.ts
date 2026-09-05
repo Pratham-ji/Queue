@@ -468,7 +468,9 @@ export const togglePause = async (req: Request, res: Response) => {
       io.to(clinicId).emit("queue_paused", { reason });
     } else {
       io.to(clinicId).emit("queue_resumed");
+      io.emit("clinics_updated");
     }
+    io.emit("clinics_updated");
 
     res.json({ success: true });
   } catch (err) {
@@ -516,6 +518,41 @@ export const demoReset = async (req: Request, res: Response) => {
     }
 
     res.json({ success: true, message: "Demo data purged successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, error: "Server Error" });
+  }
+};
+
+// ==========================================
+// GET PATIENT ACTIVE STATUS
+// ==========================================
+export const getActivePatientStatus = async (req: Request, res: Response) => {
+  try {
+    const { clinicId, token } = req.query;
+    if (!clinicId || !token) return res.status(400).json({ error: "Missing params" });
+
+    // Look for the patient in this clinic with this token
+    // Allow returning a COMPLETED ticket if completed within the last 2 hours
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+
+    const patient = await prisma.patient.findFirst({
+      where: {
+        clinicId: String(clinicId),
+        token: parseInt(String(token)),
+        OR: [
+          { status: "WAITING" },
+          { status: "SERVING" },
+          { status: "COMPLETED", completedTime: { gte: twoHoursAgo } },
+        ]
+      },
+      orderBy: { arrivalTime: "desc" }
+    });
+
+    if (!patient) {
+      return res.json({ success: true, data: null });
+    }
+
+    res.json({ success: true, data: patient });
   } catch (error) {
     res.status(500).json({ success: false, error: "Server Error" });
   }

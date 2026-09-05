@@ -22,7 +22,7 @@ interface UserQueueState {
   isLoading: boolean;
   activeToken: number | null;
   activeClinicId: string | null;   // Dynamic — set when user picks a clinic
-  queueStatus: "IDLE" | "JOINED";
+  queueStatus: "IDLE" | "JOINED" | "COMPLETED";
   queue: any[];
   peopleAhead: number;
   currentServingToken: number | null;
@@ -254,19 +254,23 @@ export const useUserQueueStore = create<UserQueueState>((set, get) => ({
           const ahead = myIndex === -1 ? 0 : myIndex;
           set({ peopleAhead: ahead, estimatedWait: ahead * 10 });
           
-          if (myIndex === -1) {
-            // Not in waiting queue. Are they served with a prescription?
+          if (myIndex === -1 && current?.token !== activeToken) {
+            // Not in waiting queue and not currently serving. Check if completed.
             try {
-              const prescRes = await api.get(`/prescription/patient/active?clinicId=${activeClinicId}&token=${activeToken}`);
-              if (prescRes.data.success && prescRes.data.data) {
-                set({ activePrescription: prescRes.data.data });
+              const statusRes = await api.get(`/queue/patient/active?clinicId=${activeClinicId}&token=${activeToken}`);
+              if (statusRes.data.success && statusRes.data.data) {
+                const pData = statusRes.data.data;
+                if (pData.status === "COMPLETED") {
+                  set({ queueStatus: "COMPLETED" });
+                  // Optionally fetch prescription here if needed
+                }
               } else {
                 // Completely done or cancelled
                 set({ queueStatus: "IDLE", activeToken: null, activePrescription: null });
                 AsyncStorage.removeItem("active_token");
               }
             } catch (err) {
-              console.log("Failed to fetch prescription state");
+              console.log("Failed to fetch patient state");
             }
           }
         }

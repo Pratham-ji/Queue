@@ -1,6 +1,7 @@
 // apps/backend/src/routes/queue.routes.ts
 
 import {
+  getActivePatientStatus,
   Router } from "express";
 import {
   getQueue,
@@ -62,5 +63,7 @@ router.post("/:clinicId/toggle-pause", togglePause);
 // 7. Resume
 router.post("/:clinicId/resume", resumeQueue);
 router.post("/demo-reset", demoReset);
+
+router.get("/patient/active", getActivePatientStatus);
 
 export default router;
